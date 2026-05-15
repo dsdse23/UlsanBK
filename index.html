@@ -27,9 +27,7 @@ body{
     position:relative;
 }
 
-h1,h2{
-    text-align:center;
-}
+h1,h2{text-align:center;}
 
 .lock-btn{
     position:absolute;
@@ -121,10 +119,6 @@ img{
     margin-top:10px;
 }
 
-.deadline-box{
-    margin-top:10px;
-}
-
 .deadline-on{
     background:red;
     color:white;
@@ -157,7 +151,7 @@ img{
     <button onclick="submitData()">제출하기</button>
 </div>
 
-<div id="deadlineStatus" class="deadline-box"></div>
+<div id="deadlineStatus"></div>
 
 <div class="capacity" id="capacityText"></div>
 
@@ -168,76 +162,55 @@ img{
 <hr>
 
 <h2>제출 명단</h2>
-
 <div id="list"></div>
 
 <div id="adminControls" style="display:none;">
-
     <input type="number" id="totalPeople" placeholder="전체 인원 설정">
-
     <button onclick="setCapacity()">인원 설정</button>
-
-    <button onclick="toggleDeadline()" class="btn-secondary">
-        제출마감
-    </button>
-
-    <button onclick="downloadReceiptsZip()" class="btn-secondary">
-        ZIP 다운로드
-    </button>
-
-    <button onclick="openPwModal()" class="btn-secondary">
-        비밀번호 변경
-    </button>
-
-    <button onclick="openResetModal()" class="btn-danger">
-        전체 초기화
-    </button>
-
+    <button onclick="toggleDeadline()" class="btn-secondary">제출마감</button>
+    <button onclick="downloadReceiptsZip()" class="btn-secondary">ZIP 다운로드</button>
+    <button onclick="openPwModal()" class="btn-secondary">비밀번호 변경</button>
+    <button onclick="openResetModal()" class="btn-danger">전체 초기화</button>
 </div>
 
 </div>
 
 <!-- 관리자 로그인 -->
 <div class="modal" id="adminModal">
-    <div class="modal-content">
-        <h3>관리자 로그인</h3>
-        <input type="password" id="adminPassword">
-        <button onclick="checkAdminPassword()">로그인</button>
-        <button onclick="closeAdminModal()" class="btn-secondary">취소</button>
-    </div>
+<div class="modal-content">
+<h3>관리자 로그인</h3>
+<input type="password" id="adminPassword">
+<button onclick="checkAdminPassword()">로그인</button>
+<button onclick="closeAdminModal()" class="btn-secondary">취소</button>
+</div>
 </div>
 
 <!-- 비밀번호 변경 -->
 <div class="modal" id="pwModal">
-    <div class="modal-content">
-        <h3>비밀번호 변경</h3>
-        <input type="password" id="currentPw" placeholder="현재 비밀번호">
-        <input type="password" id="newPw" placeholder="새 비밀번호">
-        <button onclick="confirmChangePw()">변경하기</button>
-        <button onclick="closePwModal()" class="btn-secondary">취소</button>
-    </div>
+<div class="modal-content">
+<h3>비밀번호 변경</h3>
+<input type="password" id="currentPw" placeholder="현재 비밀번호">
+<input type="password" id="newPw" placeholder="새 비밀번호">
+<button onclick="confirmChangePw()">변경</button>
+<button onclick="closePwModal()" class="btn-secondary">취소</button>
+</div>
 </div>
 
-<!-- 전체 초기화 -->
+<!-- 초기화 -->
 <div class="modal" id="resetModal">
-    <div class="modal-content">
-        <h3>전체 초기화</h3>
-        <p style="font-size:12px;color:red;">정말 모든 데이터를 삭제하시겠습니까?</p>
-        <input type="password" id="resetPassword" placeholder="관리자 비밀번호 확인">
-        <button onclick="confirmReset()" class="btn-danger">삭제</button>
-        <button onclick="closeResetModal()" class="btn-secondary">취소</button>
-    </div>
+<div class="modal-content">
+<h3>전체 초기화</h3>
+<input type="password" id="resetPassword" placeholder="비밀번호">
+<button onclick="confirmReset()" class="btn-danger">삭제</button>
+<button onclick="closeResetModal()" class="btn-secondary">취소</button>
+</div>
 </div>
 
 <script>
-
 const firebaseConfig = {
   apiKey: "AIzaSyB6ekDeGRtDKWfOIJkQ_PVt9peiVG25TyI",
   authDomain: "ulsan-breakfast.firebaseapp.com",
   projectId: "ulsan-breakfast",
-  storageBucket: "ulsan-breakfast.firebasestorage.app",
-  messagingSenderId: "880211242754",
-  appId: "1:880211242754:web:2c5b14f8ed516919571c1b",
   databaseURL: "https://ulsan-breakfast-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
@@ -245,27 +218,20 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let ADMIN_PASSWORD = "admin1234";
-const ADMIN_TIMEOUT = 5 * 60 * 1000;
-
 let isAdmin = false;
-let adminTimer = null;
 let isClosed = false;
 let totalPeople = 0;
 let currentData = [];
 
 /* realtime */
-db.ref().on("value",(snapshot)=>{
+db.ref().on("value", (snapshot)=>{
+    const all = snapshot.val() || {};
+    const breakfast = all.breakfast || {};
+    const settings = all.settings || {};
 
-    const allData = snapshot.val() || {};
-
-    const breakfast = allData.breakfast || {};
     currentData = Object.values(breakfast);
-
-    const settings = allData.settings || {};
-
     totalPeople = settings.totalPeople || 0;
     isClosed = settings.isClosed || false;
-
     ADMIN_PASSWORD = settings.adminPassword || "admin1234";
 
     updateDeadlineUI();
@@ -273,9 +239,81 @@ db.ref().on("value",(snapshot)=>{
     renderList();
 });
 
+/* submit (🔥 수정된 부분) */
+function submitData(){
+    if(isClosed) return alert("마감됨");
+
+    const name = document.getElementById("name").value.trim();
+    const amount = document.getElementById("amount").value.trim();
+    const file = document.getElementById("receipt").files[0];
+
+    if(!name || !amount || !file) return alert("입력 필요");
+
+    const reader = new FileReader();
+    reader.onload = e=>{
+        db.ref("breakfast").push({
+            name,
+            amount,
+            receipt: e.target.result,
+            fileName: file.name,
+            timestamp: Date.now()
+        });
+
+        // 🔥 입력값 초기화
+        document.getElementById("name").value = "";
+        document.getElementById("amount").value = "";
+        document.getElementById("receipt").value = "";
+
+        // 🔥 버튼 상태 변경
+        const btn = document.querySelector("#submitArea button");
+        const origin = btn.innerText;
+
+        btn.innerText = "제출되었습니다";
+        btn.style.background = "#28a745";
+
+        setTimeout(()=>{
+            btn.innerText = origin;
+            btn.style.background = "#007bff";
+        }, 1500);
+    };
+
+    reader.readAsDataURL(file);
+}
+
+/* render */
+function renderList(){
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    const sorted = [...currentData].sort((a,b)=>
+        a.name.localeCompare(b.name,"ko")
+    );
+
+    sorted.forEach(item=>{
+        const div = document.createElement("div");
+        div.className="entry";
+
+        if(isAdmin){
+            const preview = item.receipt.includes("pdf")
+                ? `<div class="pdf-placeholder">📄 PDF</div>`
+                : `<img src="${item.receipt}">`;
+
+            div.innerHTML = `
+                <b>${item.name}</b><br>
+                ${item.amount}원<br>
+                ${preview}
+            `;
+        } else {
+            div.innerHTML = `<b>${item.name}</b>`;
+        }
+
+        list.appendChild(div);
+    });
+}
+
+/* admin */
 function toggleAdminByLock(){
-    if(isAdmin) disableAdminMode();
-    else openAdminModal();
+    isAdmin ? disableAdminMode() : openAdminModal();
 }
 
 function openAdminModal(){
@@ -286,89 +324,6 @@ function closeAdminModal(){
     document.getElementById("adminModal").style.display="none";
 }
 
-/* 제출 */
-function submitData(){
-
-    if(isClosed){
-        alert("제출 마감됨");
-        return;
-    }
-
-    const name = document.getElementById("name").value.trim();
-    const amount = document.getElementById("amount").value.trim();
-    const file = document.getElementById("receipt").files[0];
-
-    if(!name || !amount || !file){
-        alert("이름, 금액, 파일 필요");
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function(e){
-
-        db.ref("breakfast").push({
-            name,
-            amount,
-            receipt: e.target.result,
-            fileName: file.name,
-            timestamp: Date.now()
-        });
-
-        document.getElementById("name").value="";
-        document.getElementById("amount").value="";
-        document.getElementById("receipt").value="";
-    };
-
-    reader.readAsDataURL(file);
-}
-
-/* list */
-function renderList(){
-
-    const list = document.getElementById("list");
-    list.innerHTML = "";
-
-    const sorted = [...currentData]
-    .sort((a,b)=>a.name.localeCompare(b.name,"ko"));
-
-    sorted.forEach(item=>{
-
-        const div = document.createElement("div");
-        div.className="entry";
-
-        if(isAdmin){
-
-            let preview = item.receipt.includes("pdf")
-                ? `<div class="pdf-placeholder">📄 PDF</div>`
-                : `<img src="${item.receipt}">`;
-
-            div.innerHTML = `
-                <b>${item.name}</b><br>
-                ${item.amount}원<br>
-                ${preview}
-            `;
-
-        }else{
-            div.innerHTML=`<b>${item.name}</b>`;
-        }
-
-        list.appendChild(div);
-    });
-}
-
-function setCapacity(){
-    const v = parseInt(document.getElementById("totalPeople").value);
-    if(!v) return;
-    db.ref("settings/totalPeople").set(v);
-}
-
-function updateCapacity(){
-    const submitted = currentData.length;
-    document.getElementById("capacityText").innerText =
-        totalPeople ? `${totalPeople-submitted}/${totalPeople}` : "";
-}
-
 function checkAdminPassword(){
     const v = document.getElementById("adminPassword").value;
 
@@ -377,120 +332,108 @@ function checkAdminPassword(){
         document.getElementById("adminControls").style.display="block";
         document.getElementById("adminStatus").style.display="block";
         closeAdminModal();
-    } else alert("비번 틀림");
+        renderList();
+    } else {
+        alert("비번 틀림");
+    }
 
     document.getElementById("adminPassword").value="";
 }
 
 function disableAdminMode(){
-    isAdmin=false;
+    isAdmin = false;
     document.getElementById("adminControls").style.display="none";
     document.getElementById("adminStatus").style.display="none";
     renderList();
 }
 
+/* capacity */
+function setCapacity(){
+    const v = parseInt(document.getElementById("totalPeople").value);
+    if(v) db.ref("settings/totalPeople").set(v);
+}
+
+function updateCapacity(){
+    const submitted = currentData.length;
+    document.getElementById("capacityText").innerText =
+        totalPeople ? `${totalPeople-submitted}/${totalPeople}` : "";
+}
+
+/* deadline */
 function toggleDeadline(){
     db.ref("settings/isClosed").set(!isClosed);
 }
 
 function updateDeadlineUI(){
     document.getElementById("submitArea").style.display =
-        isClosed ? "none":"block";
+        isClosed ? "none" : "block";
 
     document.getElementById("deadlineStatus").innerHTML =
-        isClosed ? `<div class="deadline-on">🚫 마감</div>`:"";
+        isClosed ? `<div class="deadline-on">🚫 마감</div>` : "";
 }
 
-/* 비밀번호 변경 */
-function openPwModal(){
-    document.getElementById("pwModal").style.display="flex";
-}
+/* pw */
+function openPwModal(){pwModal.style.display="flex";}
 
 function closePwModal(){
     document.getElementById("pwModal").style.display="none";
-
-    // ✅ 입력값 초기화
     document.getElementById("currentPw").value="";
     document.getElementById("newPw").value="";
 }
 
 function confirmChangePw(){
+    const cur = currentPw.value;
+    const next = newPw.value;
 
-    const cur = document.getElementById("currentPw").value.trim();
-    const next = document.getElementById("newPw").value.trim();
+    if(cur !== ADMIN_PASSWORD) return alert("틀림");
+    if(next.length < 4) return alert("4자리 이상");
 
-    if(cur !== ADMIN_PASSWORD){
-        alert("현재 비번 틀림");
-        return;
-    }
-
-    if(next.length < 4){
-        alert("4자리 이상");
-        return;
-    }
-
-    db.ref("settings").update({
-        adminPassword: next
-    });
-
+    db.ref("settings").update({adminPassword: next});
     ADMIN_PASSWORD = next;
-
     closePwModal();
 }
 
-/* 전체 초기화 */
-function openResetModal(){
-    document.getElementById("resetModal").style.display="flex";
-}
+/* reset */
+function openResetModal(){resetModal.style.display="flex";}
 
 function closeResetModal(){
     document.getElementById("resetModal").style.display="none";
-
-    // ✅ 입력값 초기화
     document.getElementById("resetPassword").value="";
 }
 
 function confirmReset(){
-
-    const pw = document.getElementById("resetPassword").value;
-
-    if(pw !== ADMIN_PASSWORD){
-        alert("비번 틀림");
-        return;
-    }
+    if(resetPassword.value !== ADMIN_PASSWORD)
+        return alert("틀림");
 
     db.ref("breakfast").remove();
 }
 
 /* ZIP */
 async function downloadReceiptsZip(){
-
     const zip = new JSZip();
-    const now = new Date();
-    const month = now.getMonth()+1;
+    const month = new Date().getMonth()+1;
 
-    currentData.forEach((item,i)=>{
-
+    currentData.forEach(item=>{
         if(!item.receipt) return;
 
         const base64 = item.receipt.split(",")[1];
         const ext = item.fileName.split(".").pop();
 
+        const safeName = item.name.replace(/[\\/:*?"<>|]/g, "");
+
         zip.file(
-            `${month}월 조식 ${item.name}.${ext}`,
+            `${month}월 조식 ${safeName}.${ext}`,
             base64,
-            {base64:true}
+            { base64:true }
         );
     });
 
     const blob = await zip.generateAsync({type:"blob"});
-
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${month}월 조식 영수증.zip`;
+    a.download = `${month}월_조식.zip`;
     a.click();
 }
-
 </script>
 
 </body>
