@@ -1,440 +1,1521 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>울산사업팀 조식비 제출</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>조식비 정산 및 제출 시스템</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
 
-<style>
-body{
-    font-family: Arial, sans-serif;
-    background:#f2f2f2;
-    margin:0;
-    padding:20px;
-}
+  <!-- JSZip Library for client-side multi-file ZIP generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-.container{
-    max-width:700px;
-    margin:auto;
-    background:white;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 0 10px rgba(0,0,0,0.1);
-    position:relative;
-}
+  <!-- Premium Web Font (Pretendard) -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" />
 
-h1,h2{text-align:center;}
-
-.lock-btn{
-    position:absolute;
-    top:10px;
-    right:10px;
-    width:28px;
-    height:28px;
-    border:none;
-    background:transparent;
-    font-size:16px;
-    opacity:0.6;
-    cursor:pointer;
-}
-
-.lock-btn:hover{opacity:1;}
-
-input{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border-radius:6px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
-}
-
-button{
-    width:100%;
-    padding:12px;
-    margin-top:10px;
-    border:none;
-    border-radius:6px;
-    background:#007bff;
-    color:white;
-    font-size:16px;
-    cursor:pointer;
-}
-
-.btn-secondary{background:#6c757d;}
-.btn-danger{background:#dc3545;}
-
-.entry{
-    background:#fafafa;
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:12px;
-    margin-top:10px;
-}
-
-img{
-    max-width:200px;
-    margin-top:10px;
-    border-radius:6px;
-}
-
-.pdf-placeholder{
-    display:inline-block;
-    margin-top:10px;
-    padding:10px 15px;
-    background:#e9ecef;
-    border-radius:6px;
-    font-size:14px;
-    color:#495057;
-    border:1px dashed #ced4da;
-}
-
-.modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.5);
-    justify-content:center;
-    align-items:center;
-}
-
-.modal-content{
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    width:300px;
-}
-
-.admin-status{
-    color:green;
-    text-align:center;
-    font-weight:bold;
-    margin-top:10px;
-}
-
-.deadline-on{
-    background:red;
-    color:white;
-    padding:12px;
-    border-radius:8px;
-    text-align:center;
-    font-weight:bold;
-}
-
-.capacity{
-    text-align:center;
-    font-weight:bold;
-    margin-top:10px;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<button class="lock-btn" onclick="toggleAdminByLock()">🔒</button>
-
-<h1>울산사업팀 조식비 제출</h1>
-
-<div id="submitArea">
-    <input type="text" id="name" placeholder="이름 입력">
-    <input type="text" id="amount" placeholder="금액 입력">
-    <input type="file" id="receipt" accept="image/*,.pdf">
-    <button onclick="submitData()">제출하기</button>
-</div>
-
-<div id="deadlineStatus"></div>
-
-<div class="capacity" id="capacityText"></div>
-
-<div id="adminStatus" class="admin-status" style="display:none;">
-관리자 모드 활성화됨
-</div>
-
-<hr>
-
-<h2>제출 명단</h2>
-<div id="list"></div>
-
-<div id="adminControls" style="display:none;">
-    <input type="number" id="totalPeople" placeholder="전체 인원 설정">
-    <button onclick="setCapacity()">인원 설정</button>
-    <button onclick="toggleDeadline()" class="btn-secondary">제출마감</button>
-    <button onclick="downloadReceiptsZip()" class="btn-secondary">ZIP 다운로드</button>
-    <button onclick="openPwModal()" class="btn-secondary">비밀번호 변경</button>
-    <button onclick="openResetModal()" class="btn-danger">전체 초기화</button>
-</div>
-
-</div>
-
-<!-- 관리자 로그인 -->
-<div class="modal" id="adminModal">
-<div class="modal-content">
-<h3>관리자 로그인</h3>
-<input type="password" id="adminPassword">
-<button onclick="checkAdminPassword()">로그인</button>
-<button onclick="closeAdminModal()" class="btn-secondary">취소</button>
-</div>
-</div>
-
-<!-- 비밀번호 변경 -->
-<div class="modal" id="pwModal">
-<div class="modal-content">
-<h3>비밀번호 변경</h3>
-<input type="password" id="currentPw" placeholder="현재 비밀번호">
-<input type="password" id="newPw" placeholder="새 비밀번호">
-<button onclick="confirmChangePw()">변경</button>
-<button onclick="closePwModal()" class="btn-secondary">취소</button>
-</div>
-</div>
-
-<!-- 초기화 -->
-<div class="modal" id="resetModal">
-<div class="modal-content">
-<h3>전체 초기화</h3>
-<input type="password" id="resetPassword" placeholder="비밀번호">
-<button onclick="confirmReset()" class="btn-danger">삭제</button>
-<button onclick="closeResetModal()" class="btn-secondary">취소</button>
-</div>
-</div>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB6ekDeGRtDKWfOIJkQ_PVt9peiVG25TyI",
-  authDomain: "ulsan-breakfast.firebaseapp.com",
-  projectId: "ulsan-breakfast",
-  databaseURL: "https://ulsan-breakfast-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let ADMIN_PASSWORD = "admin1234";
-let isAdmin = false;
-let isClosed = false;
-let totalPeople = 0;
-let currentData = [];
-
-/* realtime */
-db.ref().on("value", (snapshot)=>{
-    const all = snapshot.val() || {};
-    const breakfast = all.breakfast || {};
-    const settings = all.settings || {};
-
-    currentData = Object.values(breakfast);
-    totalPeople = settings.totalPeople || 0;
-    isClosed = settings.isClosed || false;
-    ADMIN_PASSWORD = settings.adminPassword || "admin1234";
-
-    updateDeadlineUI();
-    updateCapacity();
-    renderList();
-});
-
-/* submit (🔥 수정된 부분) */
-function submitData(){
-    if(isClosed) return alert("마감됨");
-
-    const name = document.getElementById("name").value.trim();
-    const amount = document.getElementById("amount").value.trim();
-    const file = document.getElementById("receipt").files[0];
-
-    if(!name || !amount || !file) return alert("입력 필요");
-
-    const reader = new FileReader();
-    reader.onload = e=>{
-        db.ref("breakfast").push({
-            name,
-            amount,
-            receipt: e.target.result,
-            fileName: file.name,
-            timestamp: Date.now()
-        });
-
-        // 🔥 입력값 초기화
-        document.getElementById("name").value = "";
-        document.getElementById("amount").value = "";
-        document.getElementById("receipt").value = "";
-
-        // 🔥 버튼 상태 변경
-        const btn = document.querySelector("#submitArea button");
-        const origin = btn.innerText;
-
-        btn.innerText = "제출되었습니다";
-        btn.style.background = "#28a745";
-
-        setTimeout(()=>{
-            btn.innerText = origin;
-            btn.style.background = "#007bff";
-        }, 1500);
-    };
-
-    reader.readAsDataURL(file);
-}
-
-/* render */
-function renderList(){
-    const list = document.getElementById("list");
-    list.innerHTML = "";
-
-    const sorted = [...currentData].sort((a,b)=>
-        a.name.localeCompare(b.name,"ko")
-    );
-
-    sorted.forEach(item=>{
-        const div = document.createElement("div");
-        div.className="entry";
-
-        if(isAdmin){
-            const preview = item.receipt.includes("pdf")
-                ? `<div class="pdf-placeholder">📄 PDF</div>`
-                : `<img src="${item.receipt}">`;
-
-            div.innerHTML = `
-                <b>${item.name}</b><br>
-                ${item.amount}원<br>
-                ${preview}
-            `;
-        } else {
-            div.innerHTML = `<b>${item.name}</b>`;
-        }
-
-        list.appendChild(div);
-    });
-}
-
-/* admin */
-function toggleAdminByLock(){
-    isAdmin ? disableAdminMode() : openAdminModal();
-}
-
-function openAdminModal(){
-    document.getElementById("adminModal").style.display="flex";
-}
-
-function closeAdminModal(){
-    document.getElementById("adminModal").style.display="none";
-}
-
-function checkAdminPassword(){
-    const v = document.getElementById("adminPassword").value;
-
-    if(v === ADMIN_PASSWORD){
-        isAdmin = true;
-        document.getElementById("adminControls").style.display="block";
-        document.getElementById("adminStatus").style.display="block";
-        closeAdminModal();
-        renderList();
-    } else {
-        alert("비번 틀림");
+  <style>
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      overflow-x: hidden;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
 
-    document.getElementById("adminPassword").value="";
-}
+    /* 사이드바 개폐를 위한 부드러운 하드웨어 가속 트랜지션 */
+    .sidebar-transition {
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
 
-function disableAdminMode(){
-    isAdmin = false;
-    document.getElementById("adminControls").style.display="none";
-    document.getElementById("adminStatus").style.display="none";
-    renderList();
-}
+  <!-- ==================== 1. LOGIN SCREEN ==================== -->
+  <div id="login-screen" class="fixed inset-0 bg-slate-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 max-w-md w-full space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-xl mb-1">
+          <i data-lucide="coffee" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-bold tracking-tight text-slate-900">조식비 정산 관리 포털</h2>
+        <p class="text-xs text-slate-400">울산사업팀 복리후생 제출 시스템</p>
+      </div>
 
-/* capacity */
-function setCapacity(){
-    const v = parseInt(document.getElementById("totalPeople").value);
-    if(v) db.ref("settings/totalPeople").set(v);
-}
+      <div class="space-y-4">
+        <!-- 일반 사용자 전용: 한 번의 클릭으로 울산사업팀 게스트 입장 -->
+        <button onclick="handleGuestLogin()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm tracking-wide transition shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2">
+          <i data-lucide="play-circle" class="w-5 h-5"></i>
+          울산사업팀 로그인
+        </button>
 
-function updateCapacity(){
-    const submitted = currentData.length;
-    document.getElementById("capacityText").innerText =
-        totalPeople ? `${totalPeople-submitted}/${totalPeople}` : "";
-}
+        <!-- 세련된 시각적 분할선 -->
+        <div class="relative flex items-center justify-center py-2">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-slate-200"></div>
+          </div>
+          <span class="relative px-3 bg-white text-[10px] font-semibold text-slate-400 uppercase tracking-wider">또는 관리자 계정 접속</span>
+        </div>
 
-/* deadline */
-function toggleDeadline(){
-    db.ref("settings/isClosed").set(!isClosed);
-}
+        <!-- 관리자 전용 인증 필드 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">아이디</label>
+          <div class="relative">
+            <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+            <input id="login-id" onkeyup="if(event.key === 'Enter') handleLogin()" type="text" placeholder="아이디를 입력하세요" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">비밀번호</label>
+          <div class="relative">
+            <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+            <input id="login-pw" onkeyup="if(event.key === 'Enter') handleLogin()" type="password" placeholder="비밀번호를 입력하세요" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+          </div>
+        </div>
+        <button onclick="handleLogin()" class="w-full py-2.5 bg-slate-900 hover:bg-black text-white font-semibold rounded-xl text-xs transition shadow-md">
+          로그인
+        </button>
+      </div>
+    </div>
+  </div>
 
-function updateDeadlineUI(){
-    document.getElementById("submitArea").style.display =
-        isClosed ? "none" : "block";
+  <!-- ==================== 2. MAIN APPLICATION LAYOUT ==================== -->
+  <div id="app-layout" class="hidden flex min-h-screen overflow-hidden">
+    
+    <!-- LEFT SIDEBAR (슬라이딩 토글 제어 가능) -->
+    <aside id="sidebar" class="sidebar-transition w-64 bg-[#0f172a] text-slate-300 flex flex-col shrink-0 z-30 fixed inset-y-0 left-0 -translate-x-full md:translate-x-0">
+      
+      <!-- Brand Logo -->
+      <div class="h-16 flex items-center justify-between px-6 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-md">
+            <i data-lucide="coffee" class="w-4 h-4"></i>
+          </div>
+          <span class="font-bold tracking-tight text-white text-[15px]">BREAKFAST <span class="text-xs text-indigo-400 font-mono ml-0.5">V 1.0</span></span>
+        </div>
+        <!-- 모바일 닫기 버튼 -->
+        <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
 
-    document.getElementById("deadlineStatus").innerHTML =
-        isClosed ? `<div class="deadline-on">🚫 마감</div>` : "";
-}
+      <!-- Navigation Menu -->
+      <div class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+        <p class="text-[11px] font-semibold tracking-wider text-slate-500 uppercase px-3 mb-2">Workspace</p>
+        
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="menu-item w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 hover:bg-slate-800 hover:text-white">
+          <div class="flex items-center gap-3">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>대시보드</span>
+          </div>
+        </button>
 
-/* pw */
-function openPwModal(){pwModal.style.display="flex";}
+        <button onclick="switchTab('breakfast')" id="nav-breakfast" class="menu-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-white bg-indigo-600 shadow-sm shadow-indigo-600/10">
+          <i data-lucide="receipt" class="w-4 h-4"></i>
+          <span>조식비 제출</span>
+        </button>
 
-function closePwModal(){
-    document.getElementById("pwModal").style.display="none";
-    document.getElementById("currentPw").value="";
-    document.getElementById("newPw").value="";
-}
+        <!-- [관리자 전용] 스케줄표 (달력) 메뉴 아이콘 -->
+        <button onclick="switchTab('schedule')" id="nav-schedule" class="menu-item hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800 hover:text-white">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+          <span>스케줄표</span>
+        </button>
+      </div>
 
-function confirmChangePw(){
-    const cur = currentPw.value;
-    const next = newPw.value;
+      <!-- User Session Area (Footer) -->
+      <div class="p-4 border-t border-slate-800/60 bg-slate-950/40">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <div id="session-avatar" class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-200 border border-slate-600 text-sm">
+              울산
+            </div>
+            <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></div>
+          </div>
+          <div class="flex-1 overflow-hidden">
+            <h4 id="session-name" class="text-xs font-semibold text-white truncate">울산사업팀</h4>
+            <p id="session-role" class="text-[10px] text-slate-400 truncate">이용 부서</p>
+          </div>
+          <button onclick="handleLogout()" class="text-slate-500 hover:text-slate-300 p-1.5 rounded-md transition hover:bg-slate-800" title="로그아웃">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
 
-    if(cur !== ADMIN_PASSWORD) return alert("틀림");
-    if(next.length < 4) return alert("4자리 이상");
+    <!-- Overlay backdrops for responsive sidebars -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="hidden fixed inset-0 bg-slate-900/40 z-20 md:hidden backdrop-blur-xs"></div>
 
-    db.ref("settings").update({adminPassword: next});
-    ADMIN_PASSWORD = next;
-    closePwModal();
-}
+    <!-- MAIN CONTAINER (사이드바 상태에 따라 패딩 마진 동적 조절) -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-y-auto md:pl-64 transition-all duration-300">
+      
+      <!-- TOP NAVIGATION BAR -->
+      <header class="h-16 border-b border-slate-200/80 bg-white flex items-center justify-between px-6 shrink-0 sticky top-0 z-10 shadow-xs">
+        <div class="flex items-center gap-4">
+          <!-- 상단 햄버거 토글 버튼 (모바일 및 데스크톱 모두 활성화) -->
+          <button onclick="toggleSidebar()" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          
+          <nav class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-400">
+            <span>울산사업팀</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-300"></i>
+            <span id="breadcrumb-active" class="text-slate-700 font-semibold text-[13px]">조식비 제출</span>
+          </nav>
+        </div>
 
-/* reset */
-function openResetModal(){resetModal.style.display="flex";}
+        <div class="flex items-center gap-4">
+          <div id="user-role-badge" class="px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs text-indigo-600 font-semibold">
+            울산사업팀
+          </div>
+        </div>
+      </header>
 
-function closeResetModal(){
-    document.getElementById("resetModal").style.display="none";
-    document.getElementById("resetPassword").value="";
-}
+      <!-- PAGE CONTENT WRAPPER -->
+      <main class="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
+        
+        <!-- ==================== PAGE 1: DASHBOARD ==================== -->
+        <section id="page-dashboard" class="hidden space-y-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 id="welcome-message" class="text-2xl font-bold tracking-tight text-slate-900">환영합니다!</h2>
+              <p class="text-sm text-slate-500 mt-1">이번 달 조식비 청구 마감일은 <span class="text-rose-600 font-bold underline" id="deadline-display">5월 25일</span> 입니다. 누락 없이 증빙을 제출해 주세요.</p>
+            </div>
+            <div class="text-xs text-slate-400 bg-white border border-slate-200/80 px-3 py-2 rounded-lg">
+              최종 데이터 연동 상태: <span class="text-emerald-500 font-bold">실시간 완료</span>
+            </div>
+          </div>
 
-function confirmReset(){
-    if(resetPassword.value !== ADMIN_PASSWORD)
-        return alert("틀림");
+          <!-- Admin Config Panel (Only visible to admin) -->
+          <div id="admin-config-panel" class="hidden bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <i data-lucide="settings" class="text-rose-600 w-4 h-4"></i> 정산 기준 정보 설정 (관리자 전용)
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5">총 인원 설정 (명)</label>
+                <input id="admin-input-headcount" type="number" oninput="updateAdminConfig()" value="12" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5">청구 마감일 설정</label>
+                <input id="admin-input-deadline" type="text" oninput="updateAdminConfig()" value="5월 25일" placeholder="예: 5월 25일" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+              </div>
+            </div>
+          </div>
 
-    db.ref("breakfast").remove();
-}
+          <!-- Admin Account Settings Panel (Only visible to admin) -->
+          <div id="admin-account-panel" class="hidden bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <i data-lucide="key-round" class="text-indigo-600 w-4 h-4"></i> 관리자 로그인 계정 정보 수정 (관리자 전용)
+            </h3>
+            <div class="max-w-md p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3">
+              <span class="text-xs font-bold text-slate-700 block">관리자 계정 변경</span>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-1">아이디</label>
+                  <input id="admin-admin-id" type="text" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition font-medium text-slate-700" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-1">비밀번호</label>
+                  <input id="admin-admin-pw" type="password" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition font-medium text-slate-700" />
+                </div>
+              </div>
+            </div>
 
-/* ZIP */
-async function downloadReceiptsZip(){
-    const zip = new JSZip();
-    const month = new Date().getMonth()+1;
+            <!-- 승인 검증 필드 -->
+            <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-2 max-w-sm w-full">
+                <span class="text-xs font-semibold text-slate-500 shrink-0">현재 관리자 비밀번호 승인:</span>
+                <input id="admin-confirm-pw" onkeyup="if(event.key === 'Enter') saveNewCredentials()" type="password" placeholder="비밀번호 인증" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition" />
+              </div>
+              <button onclick="saveNewCredentials()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition shadow-md shadow-indigo-600/10">
+                인증 후 설정 변경 저장
+              </button>
+            </div>
+          </div>
 
-    currentData.forEach(item=>{
-        if(!item.receipt) return;
+          <!-- Key status metrics grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-semibold uppercase tracking-wider">총 인원</span>
+                <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+              </div>
+              <div class="mt-4">
+                <h3 class="text-2xl font-bold text-slate-900" id="stat-total-headcount">12명</h3>
+                <span class="text-[11px] text-slate-400 font-medium block mt-1">울산사업팀 정산 대상 인원</span>
+              </div>
+            </div>
 
-        const base64 = item.receipt.split(",")[1];
-        const ext = item.fileName.split(".").pop();
+            <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-semibold uppercase tracking-wider">제출 완료</span>
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+              </div>
+              <div class="mt-4">
+                <h3 id="dash-submitted-count" class="text-2xl font-bold text-slate-900">0명</h3>
+                <span class="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">정상 정산 진행 중</span>
+              </div>
+            </div>
 
-        const safeName = item.name.replace(/[\\/:*?"<>|]/g, "");
+            <div class="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+              <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-semibold uppercase tracking-wider">실시간 총 정산 금액</span>
+                <i data-lucide="wallet" class="w-4 h-4 text-indigo-500"></i>
+              </div>
+              <div class="mt-4">
+                <h3 id="dash-calculated-amount" class="text-2xl font-bold text-slate-900">0 원</h3>
+                <span class="text-[11px] text-slate-400 mt-1 block">제출 완료 인원 기준 (1인당 50,000원 산정)</span>
+              </div>
+            </div>
+          </div>
 
-        zip.file(
-            `${month}월 조식 ${safeName}.${ext}`,
-            base64,
-            { base64:true }
-        );
-    });
+          <!-- Guidelines -->
+          <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-3">
+            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <i data-lucide="shield-alert" class="text-indigo-600 w-4 h-4"></i> 조식비 지원 정산 요령 및 규정
+            </h3>
+            <ul class="space-y-2 text-xs text-slate-500 list-disc pl-5">
+              <li>실제 조식 관련 구매 내역 및 편의점 간편식 구매 내역만 정산이 가능합니다. (주류 및 일반 생필품 제외)</li>
+              <li>첨부자료는 반드시 결제일시와 승인번호가 식별 가능한 <span class="font-semibold text-slate-800">PDF 형식의 스캔본이나 전자영수증</span>이어야 합니다.</li>
+              <li>제출 후 수정이 필요할 시 <span class="font-semibold text-slate-800">관리자에게 승인 취소를 별도 요청 해주시기 바랍니다</span>.</li>
+            </ul>
+          </div>
+        </section>
 
-    const blob = await zip.generateAsync({type:"blob"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${month}월_조식.zip`;
-    a.click();
-}
-</script>
+        <!-- ==================== PAGE 2: BREAKFAST SUBMIT ==================== -->
+        <section id="page-breakfast" class="space-y-6">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900">이번 달 조식비 정산 청구</h2>
+              <p class="text-sm text-slate-500 mt-1">개별 사용한 실 조식비를 합산하여 영수증 증빙 파일과 함께 제출해 주십시오.</p>
+            </div>
+            
+            <!-- Admin Close & Reset Controls -->
+            <div id="admin-deadline-control" class="hidden flex items-center gap-2">
+              <button id="btn-toggle-close" onclick="toggleSubmissionsClosed()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                <span id="btn-toggle-close-text">제출 마감하기</span>
+              </button>
+              <button id="btn-admin-reset" onclick="openResetModal()" class="hidden px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                <span>정산 데이터 초기화</span>
+              </button>
+            </div>
+          </div>
 
+          <!-- Interactive Area Container -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: SUBMISSION FORM (약 33% 너비 배정) -->
+            <div class="md:col-span-4 bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-5 relative overflow-hidden">
+              
+              <!-- Locked overlay styled to match theme perfectly -->
+              <div id="form-locked-overlay" class="hidden absolute inset-0 bg-slate-950/5 backdrop-blur-[1px] flex flex-col items-center justify-center z-20 text-center p-6">
+                <div class="p-4 bg-white/95 rounded-2xl border border-slate-200 shadow-xl max-w-xs space-y-3">
+                  <div class="inline-flex p-3 bg-rose-50 text-rose-500 rounded-xl">
+                    <i data-lucide="lock" class="w-6 h-6"></i>
+                  </div>
+                  <h4 class="font-bold text-slate-900 text-sm">이번 달 조식비 정산 마감</h4>
+                  <p class="text-xs text-slate-400">정산 검수 및 입금 준비로 인해 신규 청구 접수가 조기 마감되었습니다.</p>
+                </div>
+              </div>
+
+              <h3 class="text-sm font-bold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
+                <i data-lucide="file-edit" class="w-4 h-4 text-indigo-600"></i> 정산 정보 작성
+              </h3>
+              
+              <div class="space-y-4">
+                <!-- 이름 입력 -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">이름</label>
+                  <input id="input-name" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="이름을 직접 입력해 주세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium text-slate-800" />
+                </div>
+
+                <!-- 실제사용금액 -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">실제 총 사용금액 (KRW)</label>
+                  <div class="relative">
+                    <input id="input-amount" oninput="formatAmountInput(this)" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="원 단위 숫자로만 입력하세요" class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition" />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
+                  </div>
+                </div>
+
+                <!-- 첨부파일 (PDF 포함) -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">영수증 및 증빙자료 첨부</label>
+                  <div onclick="triggerFileSelect()" id="drop-zone" class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-50/100 transition">
+                    <input type="file" id="real-file-input" onchange="handleFileSelected(this)" class="hidden" accept=".pdf,image/*" />
+                    <div class="space-y-2">
+                      <div class="inline-flex p-2.5 bg-white border border-slate-200 text-slate-400 rounded-lg shadow-2xs">
+                        <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                      </div>
+                      <div class="text-xs text-slate-600">
+                        <span class="font-semibold text-indigo-600">여기를 클릭하여</span> 증빙 파일 첨부
+                      </div>
+                      <p class="text-[10px] text-slate-400">PDF, JPG, PNG 파일 형식 지원 (최대 10MB)</p>
+                    </div>
+                  </div>
+
+                  <!-- Selected File Display -->
+                  <div id="file-display-container" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <i data-lucide="file-check" id="file-icon" class="w-4 h-4 text-emerald-500 shrink-0"></i>
+                      <span id="selected-file-name" class="text-xs text-slate-700 font-medium truncate">receipt.pdf</span>
+                    </div>
+                    <button onclick="removeSelectedFile()" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-rose-500 transition">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-2">
+                <button onclick="submitBreakfastReceipt()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition shadow-sm">
+                  정산 청구서 최종 제출
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: SUBMISSION LIST (약 67% 너비 배정, whitespace-nowrap 적용) -->
+            <div class="md:col-span-8 bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col justify-between">
+              
+              <div>
+                <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-slate-500"></i> 전체 정산 제출 명단
+                  </h3>
+                  
+                  <div class="flex items-center gap-2">
+                    <!-- Batch download only visible to admin -->
+                    <button id="admin-download-btn" onclick="batchDownloadProofsZip()" class="hidden px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-lg text-[11px] transition flex items-center gap-1">
+                      <i data-lucide="download" class="w-3 h-3"></i>
+                      증빙 일괄 다운로드 (ZIP)
+                    </button>
+                    <span id="list-total-count" class="text-[10px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded">총 0명 제출 완료</span>
+                  </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr id="table-header-row" class="bg-slate-50 text-slate-400 uppercase tracking-wider border-b border-slate-100 font-semibold">
+                        <!-- Dynamic Header based on Role -->
+                      </tr>
+                    </thead>
+                    <tbody id="table-body-rows" class="divide-y divide-slate-100 text-slate-600">
+                      <!-- Dynamic Body based on Role -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="p-4 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-400">
+                <span>* 정산 금액 및 파일 증빙은 관련 사규 및 개인정보보호 규정에 의거하여 정산 담당자 계정으로 로그인 시에만 조회 권한이 개방됩니다.</span>
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==================== PAGE 3: SCHEDULE (스케줄표) ==================== -->
+        <section id="page-schedule" class="hidden space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900">당월 정산 및 일정 관리표</h2>
+              <p class="text-sm text-slate-500 mt-1">부서 관리 일정을 등록하고 공유 일정표를 관리하십시오.</p>
+            </div>
+            
+            <!-- 달 이동 버튼 컨트롤 -->
+            <div class="flex items-center gap-2 bg-white border border-slate-200/80 rounded-xl p-1.5 shadow-2xs">
+              <button onclick="changeCalendarMonth(-1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <span id="calendar-header-title" class="px-4 text-xs font-bold text-slate-800 min-w-[110px] text-center font-mono">2026년 05월</span>
+              <button onclick="changeCalendarMonth(1)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- 달력 그리드 영역 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <!-- 요일 행 -->
+            <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-100 text-center text-[11px] font-bold text-slate-400 py-3 uppercase tracking-wider">
+              <div class="text-rose-500">Sun (일)</div>
+              <div>Mon (월)</div>
+              <div>Tue (화)</div>
+              <div>Wed (수)</div>
+              <div>Thu (목)</div>
+              <div>Fri (금)</div>
+              <div class="text-indigo-500">Sat (토)</div>
+            </div>
+            
+            <!-- 날짜 데이터 셀 바인딩 (7열 고정 그리드) -->
+            <div id="calendar-days-grid" class="grid grid-cols-7 divide-x divide-y divide-slate-100 bg-slate-100/30">
+              <!-- JS를 통해 동적 생성 -->
+            </div>
+          </div>
+
+          <!-- 달력 사용 가이드 -->
+          <div class="bg-indigo-50/50 border border-indigo-100/80 rounded-xl p-4 flex items-start gap-3">
+            <i data-lucide="info" class="w-4 h-4 text-indigo-500 shrink-0 mt-0.5"></i>
+            <div class="text-xs text-indigo-800 space-y-1">
+              <p class="font-bold">달력 활용 정보</p>
+              <p>날짜 칸을 클릭하면 해당 날짜에 맞춤형 상세 일정을 새로 기입하거나 기존 일정을 관리할 수 있습니다.</p>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- GLOBAL FOOTER -->
+      <footer class="mt-auto py-5 px-6 border-t border-slate-200/60 bg-white/50 text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <span>© 2026 한솔오리온텍 울산사업팀. All rights reserved.</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="hover:underline cursor-pointer">이용약관 및 보안서약서</span>
+          <span>•</span>
+          <span>제작자: L.D.S</span>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- ==================== 3. CONFIRM REJECT SECURITY MODAL ==================== -->
+  <div id="reject-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-sm w-full space-y-4">
+      <div class="text-center space-y-2">
+        <div class="inline-flex p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <i data-lucide="shield-alert" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-bold text-slate-900 text-sm">반려 처리 보안 승인</h3>
+        <p class="text-xs text-slate-400 leading-normal">실수로 이루어진 반려 요인 방지를 위해 관리자 확인 비밀번호를 재입력해야 최종 승인 처리 및 목록에서 영구 삭제됩니다.</p>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-500 mb-1">관리자 확인 비밀번호</label>
+        <input id="reject-admin-pw" onkeyup="if(event.key === 'Enter') confirmRejectSubmission()" type="password" placeholder="비밀번호" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-center font-mono tracking-widest" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="closeRejectModal()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
+          작업 취소
+        </button>
+        <button onclick="confirmRejectSubmission()" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition shadow-sm shadow-rose-600/10">
+          확인 및 반려 삭제
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. CONFIRM RESET SECURITY MODAL ==================== -->
+  <div id="reset-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-sm w-full space-y-4">
+      <div class="text-center space-y-2">
+        <div class="inline-flex p-3 bg-amber-50 text-amber-600 rounded-xl">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-bold text-slate-900 text-sm">전체 정산 데이터 초기화</h3>
+        <p class="text-xs text-slate-400 leading-normal">현재 제출된 모든 조식비 정산 데이터가 영구 삭제되며 다음 달 정산을 시작할 수 있도록 초기화됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-500 mb-1">관리자 확인 비밀번호</label>
+        <input id="reset-admin-pw" onkeyup="if(event.key === 'Enter') confirmResetData()" type="password" placeholder="비밀번호" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition text-center font-mono tracking-widest" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="closeResetModal()" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">
+          작업 취소
+        </button>
+        <button onclick="confirmResetData()" class="py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition shadow-sm shadow-rose-600/10">
+          인증 후 초기화 실행
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 5. CALENDAR SCHEDULE MODAL ==================== -->
+  <div id="schedule-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-md w-full space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-600"></i> 일정 등록 및 관리
+          </h3>
+          <span id="schedule-modal-date" class="text-[11px] font-mono text-slate-400 mt-0.5 block">2026-05-20</span>
+        </div>
+        <button onclick="closeScheduleModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- 일정 목록 영역 -->
+      <div class="space-y-2">
+        <label class="block text-[11px] font-semibold text-slate-500">등록된 일정 목록</label>
+        <div id="modal-schedule-list" class="max-h-36 overflow-y-auto border border-slate-100 rounded-xl p-2.5 space-y-1.5 bg-slate-50/50">
+          <!-- JS 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 새 일정 추가 영역 -->
+      <div class="space-y-3 pt-2 border-t border-slate-100">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 mb-1.5">새 일정 추가</label>
+          <input id="schedule-new-text" onkeyup="if(event.key === 'Enter') addCalendarEvent()" type="text" placeholder="예: 조식비 정산 마감일, 식재료 검수" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition" />
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-500 mb-1.5">일정 태그 색상</label>
+          <div class="flex items-center gap-3">
+            <label class="inline-flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="schedule-color" value="indigo" checked class="accent-indigo-600" />
+              <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+              <span class="text-[10px] text-slate-500 font-medium">일반</span>
+            </label>
+            <label class="inline-flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="schedule-color" value="emerald" class="accent-emerald-600" />
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <span class="text-[10px] text-slate-500 font-medium">검수</span>
+            </label>
+            <label class="inline-flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="schedule-color" value="rose" class="accent-rose-600" />
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span class="text-[10px] text-slate-500 font-medium">마감</span>
+            </label>
+            <label class="inline-flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="schedule-color" value="amber" class="accent-amber-600" />
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span class="text-[10px] text-slate-500 font-medium">입고</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="closeScheduleModal()" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
+          닫기
+        </button>
+        <button onclick="addCalendarEvent()" class="py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition shadow-sm shadow-indigo-600/10">
+          일정 추가하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== JAVASCRIPT & STATE MANAGEMENT ==================== -->
+  <script>
+    
+    // 1. APP STATE
+    let currentUser = null; 
+    let selectedFile = null; 
+    let isSubmissionsClosed = false; 
+    let totalHeadcount = 12; 
+    let deadlineText = "5월 25일"; 
+    let pendingRejectIndex = null; 
+
+    // 달력 관리 상태 변수 (기본 2026년 5월)
+    let calendarDate = new Date(2026, 4, 1); 
+    let selectedCalendarDateString = ""; // 현재 모달에서 제어 중인 날짜 키
+
+    // 관리자/사용자 계정 정보
+    let credentials = {
+      admin: { id: '0000', pw: '0000' }
+    };
+
+    // 가상 청구 데이터 리스트
+    let submissions = [];
+
+    // 가상 일정(스케줄) 데이터 베이스 - 사용자의 요청에 따라 모든 예시 데이터 제거 후 완전 포맷팅
+    let schedulesDb = {};
+
+    window.onload = function() {
+      lucide.createIcons();
+    };
+
+
+    // 2. LOGIN CONTROLLER
+    function handleGuestLogin() {
+      currentUser = {
+        id: 'guest_user',
+        name: '울산사업팀',
+        role: 'user',
+        avatarInit: '울산'
+      };
+      showToast("울산사업팀 권한으로 접속했습니다.", "게스트 로그인");
+      enterApp();
+    }
+
+    function handleLogin() {
+      const idInput = document.getElementById('login-id').value.trim();
+      const pwInput = document.getElementById('login-pw').value.trim();
+
+      if (idInput === credentials.admin.id && pwInput === credentials.admin.pw) {
+        currentUser = {
+          id: credentials.admin.id,
+          name: '관리자',
+          role: 'admin',
+          avatarInit: '관리'
+        };
+        showToast("관리자 권한으로 로그인했습니다.", "관리자 로그인");
+        enterApp();
+      } else {
+        showToast("관리자 계정 정보가 올바르지 않습니다. 다시 입력해 주세요.", "로그인 실패");
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      selectedFile = null;
+      document.getElementById('app-layout').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('login-id').value = '';
+      document.getElementById('login-pw').value = '';
+      showToast("보안 세션이 파기되었습니다.", "로그아웃");
+    }
+
+
+    // 3. ENTER APPLICATION & SETUP INTERFACE
+    function enterApp() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-layout').classList.remove('hidden');
+
+      document.getElementById('session-name').innerText = currentUser.name;
+      document.getElementById('session-avatar').innerText = currentUser.avatarInit;
+      document.getElementById('session-role').innerText = currentUser.role === 'admin' ? '정산 총괄 관리자' : '이용 부서';
+
+      const roleBadge = document.getElementById('user-role-badge');
+      const adminCtrl = document.getElementById('admin-deadline-control');
+      const adminPanel = document.getElementById('admin-config-panel');
+      const adminAccountPanel = document.getElementById('admin-account-panel');
+      const adminDlBtn = document.getElementById('admin-download-btn');
+      const navSchedule = document.getElementById('nav-schedule');
+      
+      if (currentUser.role === 'admin') {
+        roleBadge.innerText = "관리자";
+        roleBadge.className = "px-3 py-1 bg-rose-50 border border-rose-100 rounded-full text-xs text-rose-600 font-semibold animate-pulse";
+        if (adminCtrl) {
+          adminCtrl.className = "flex items-center gap-2";
+          adminCtrl.classList.remove('hidden');
+        }
+        if (adminPanel) adminPanel.classList.remove('hidden');
+        if (adminAccountPanel) adminAccountPanel.classList.remove('hidden');
+        if (adminDlBtn) adminDlBtn.classList.remove('hidden');
+        if (navSchedule) navSchedule.classList.remove('hidden'); // 관리자일 때만 사이드바 메뉴 활성화
+
+        document.getElementById('admin-admin-id').value = credentials.admin.id;
+        document.getElementById('admin-admin-pw').value = credentials.admin.pw;
+        document.getElementById('admin-confirm-pw').value = '';
+        
+        const resetBtn = document.getElementById('btn-admin-reset');
+        if (resetBtn) {
+          if (isSubmissionsClosed) {
+            resetBtn.classList.remove('hidden');
+          } else {
+            resetBtn.classList.add('hidden');
+          }
+        }
+      } else {
+        roleBadge.innerText = "울산사업팀";
+        roleBadge.className = "px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs text-indigo-600 font-semibold";
+        if (adminCtrl) adminCtrl.classList.add('hidden');
+        if (adminPanel) adminPanel.classList.add('hidden');
+        if (adminAccountPanel) adminAccountPanel.classList.add('hidden');
+        if (adminDlBtn) adminDlBtn.classList.add('hidden');
+        if (navSchedule) navSchedule.classList.add('hidden'); // 일반 게스트에겐 미노출
+      }
+
+      document.getElementById('input-name').value = '';
+      switchTab('dashboard');
+    }
+
+    // 3-1. ADMIN CONFIG PANEL CONTROLLER
+    function updateAdminConfig() {
+      const headcountInput = document.getElementById('admin-input-headcount');
+      const deadlineInput = document.getElementById('admin-input-deadline');
+
+      if (headcountInput && headcountInput.value) {
+        totalHeadcount = parseInt(headcountInput.value, 10) || 12;
+      }
+      if (deadlineInput && deadlineInput.value) {
+        deadlineText = deadlineInput.value.trim() || "5월 25일";
+      }
+
+      document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
+      document.getElementById('deadline-display').innerText = deadlineText;
+    }
+
+    // 4. TAB CONTROLLER
+    function switchTab(tabId) {
+      document.getElementById('page-dashboard').classList.add('hidden');
+      document.getElementById('page-breakfast').classList.add('hidden');
+      document.getElementById('page-schedule').classList.add('hidden');
+
+      document.getElementById(`page-${tabId}`).classList.remove('hidden');
+
+      document.querySelectorAll('.menu-item').forEach(btn => {
+        if (btn.id === 'nav-schedule' && (!currentUser || currentUser.role !== 'admin')) {
+          btn.className = "menu-item hidden w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800 hover:text-white";
+        } else {
+          btn.className = "menu-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:bg-slate-800 hover:text-white";
+        }
+      });
+
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) {
+        activeNav.className = "menu-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-white bg-indigo-600 shadow-sm shadow-indigo-600/10";
+      }
+
+      let activeTitle = "조식비 제출";
+      if (tabId === 'dashboard') activeTitle = "대시보드";
+      else if (tabId === 'schedule') activeTitle = "스케줄표";
+
+      document.getElementById('breadcrumb-active').innerText = activeTitle;
+
+      updateStatistics();
+      renderSubmissionsList();
+      
+      if (tabId === 'schedule') {
+        renderCalendar();
+      }
+
+      if (window.innerWidth < 768) {
+        document.getElementById('sidebar').classList.add('-translate-x-full');
+        document.getElementById('sidebar-overlay').classList.add('hidden');
+      }
+    }
+
+    // 4-1. GLOBAL COLLAPSIBLE SIDEBAR TOGGLER
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('#app-layout > div.flex-1');
+      const overlay = document.getElementById('sidebar-overlay');
+      const isMobile = window.innerWidth < 768;
+
+      if (isMobile) {
+        if (sidebar.classList.contains('-translate-x-full')) {
+          sidebar.classList.remove('-translate-x-full');
+          overlay.classList.remove('hidden');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+          overlay.classList.add('hidden');
+        }
+      } else {
+        if (sidebar.classList.contains('md:-translate-x-full')) {
+          sidebar.classList.remove('md:-translate-x-full');
+          mainContent.classList.add('md:pl-64');
+        } else {
+          sidebar.classList.add('md:-translate-x-full');
+          mainContent.classList.remove('md:pl-64');
+        }
+      }
+    }
+
+
+    // 5. FILE UPLOAD CONTROLLER
+    function triggerFileSelect() {
+      if (isSubmissionsClosed) return;
+      document.getElementById('real-file-input').click();
+    }
+
+    function handleFileSelected(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        selectedFile = {
+          name: file.name,
+          size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+          fileObject: file
+        };
+        showToast("파일이 임시 업로드 영역에 준비되었습니다.", "파일 첨부");
+        displaySelectedFile();
+      }
+    }
+
+    function displaySelectedFile() {
+      if (!selectedFile) return;
+      document.getElementById('selected-file-name').innerText = `${selectedFile.name} (${selectedFile.size})`;
+      document.getElementById('file-display-container').classList.remove('hidden');
+      
+      const icon = document.getElementById('file-icon');
+      if (selectedFile.name.endsWith('.pdf')) {
+        icon.className = "w-4 h-4 text-rose-500 shrink-0";
+        icon.setAttribute('data-lucide', 'file-text');
+      } else {
+        icon.className = "w-4 h-4 text-emerald-500 shrink-0";
+        icon.setAttribute('data-lucide', 'image');
+      }
+      lucide.createIcons();
+    }
+
+    function removeSelectedFile() {
+      selectedFile = null;
+      document.getElementById('real-file-input').value = '';
+      document.getElementById('file-display-container').classList.add('hidden');
+      showToast("첨부했던 증빙 파일이 취소되었습니다.", "파일 철회");
+    }
+
+    function formatAmountInput(input) {
+      let value = input.value.replace(/[^0-9]/g, '');
+      if (value) {
+        input.value = Number(value).toLocaleString();
+      } else {
+        input.value = '';
+      }
+    }
+
+
+    // 6. FORM SUBMISSION
+    function submitBreakfastReceipt() {
+      if (isSubmissionsClosed) {
+        showToast("정산이 마감되어 현재 제출할 수 없습니다.", "제출 불가");
+        return;
+      }
+
+      const rawName = document.getElementById('input-name').value.trim();
+      const rawAmount = document.getElementById('input-amount').value.replace(/,/g, '');
+      const amount = Number(rawAmount);
+
+      if (!rawName) {
+        showToast("제출하시는 분의 이름을 정확히 입력하세요.", "입력 요망");
+        return;
+      }
+
+      if (!amount || amount <= 0) {
+        showToast("실제 정산받으실 금액을 입력하십시오.", "입력 오류");
+        return;
+      }
+
+      if (!selectedFile) {
+        showToast("증빙용 영수증 사진 혹은 PDF 파일을 반드시 첨부해야 합니다.", "첨부 누락");
+        return;
+      }
+
+      const existingIdx = submissions.findIndex(s => s.name === rawName);
+      const today = new Date().toISOString().split('T')[0];
+
+      const newSubmission = {
+        name: rawName,
+        amount: amount,
+        file: selectedFile.name,
+        fileObject: selectedFile.fileObject, 
+        submitted: true,
+        date: today,
+        status: "대기 중"
+      };
+
+      if (existingIdx > -1) {
+        submissions[existingIdx] = newSubmission;
+      } else {
+        submissions.unshift(newSubmission);
+      }
+
+      showToast(`${rawName} 님의 정산 청구서 수신이 완료되었습니다.`, "제출 성공");
+
+      document.getElementById('input-name').value = '';
+      document.getElementById('input-amount').value = '';
+      removeSelectedFile();
+
+      updateStatistics();
+      renderSubmissionsList();
+    }
+
+    // 7. STATS AND DASHBOARD SYNCHRONIZER
+    function updateStatistics() {
+      const activeSubmittedCount = submissions.filter(s => s.submitted).length;
+      const totalCalculatedAmount = activeSubmittedCount * 50000;
+
+      document.getElementById('dash-submitted-count').innerText = `${activeSubmittedCount}명`;
+      document.getElementById('dash-calculated-amount').innerText = `${totalCalculatedAmount.toLocaleString()} 원`;
+
+      const totalSubmittedAll = submissions.filter(s => s.submitted).length;
+      const totalCountText = document.getElementById('list-total-count');
+      if (totalCountText) {
+        totalCountText.innerText = `총 ${totalSubmittedAll}명 제출 완료`;
+      }
+
+      const welcomeMsg = document.getElementById('welcome-message');
+      if (welcomeMsg && currentUser) {
+        welcomeMsg.innerText = `안녕하세요, ${currentUser.name} 님!`;
+      }
+    }
+
+
+    // 8. DYNAMIC TABLE RENDERER
+    function renderSubmissionsList() {
+      const headerRow = document.getElementById('table-header-row');
+      const bodyRows = document.getElementById('table-body-rows');
+      if (!headerRow || !bodyRows) return;
+
+      headerRow.innerHTML = '';
+      bodyRows.innerHTML = '';
+
+      if (currentUser.role === 'admin') {
+        headerRow.innerHTML = `
+          <th class="py-4 px-6 whitespace-nowrap">이름</th>
+          <th class="py-4 px-6 whitespace-nowrap">실제 사용 금액</th>
+          <th class="py-4 px-6 whitespace-nowrap">제출 증빙</th>
+          <th class="py-4 px-6 whitespace-nowrap">정산 일자</th>
+          <th class="py-4 px-6 whitespace-nowrap">상태</th>
+          <th class="py-4 px-6 whitespace-nowrap text-right">제어</th>
+        `;
+      } else {
+        headerRow.innerHTML = `
+          <th class="py-4 px-6 whitespace-nowrap">이름</th>
+          <th class="py-4 px-6 whitespace-nowrap">정산 제출 여부</th>
+          <th class="py-4 px-6 whitespace-nowrap text-right">처리 비고</th>
+        `;
+      }
+
+      submissions.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+
+        if (currentUser.role === 'admin') {
+          const amountStr = item.submitted ? `${item.amount.toLocaleString()} 원` : '-';
+          const statusBadge = getStatusBadgeClass(item.status);
+          const fileLink = item.file ? `
+            <button onclick="simulateFileDownload('${item.file}')" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i> ${item.file}
+            </button>
+          ` : '<span class="text-slate-300">-</span>';
+
+          const actionButtons = item.submitted && item.status === '대기 중' ? `
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick="updateSubmissionStatus(${index}, '승인 완료')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded text-[11px] transition">승인</button>
+              <button onclick="openRejectModal(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded text-[11px] transition">반려</button>
+            </div>
+          ` : `<span class="text-[10px] text-slate-400 font-medium">관리 완료</span>`;
+
+          tr.innerHTML = `
+            <td class="py-4 px-6 font-semibold text-slate-900 whitespace-nowrap">${item.name}</td>
+            <td class="py-4 px-6 font-mono font-medium text-slate-700 whitespace-nowrap">${amountStr}</td>
+            <td class="py-4 px-6 whitespace-nowrap">${fileLink}</td>
+            <td class="py-4 px-6 text-slate-400 whitespace-nowrap">${item.date}</td>
+            <td class="py-4 px-6 whitespace-nowrap">${statusBadge}</td>
+            <td class="py-4 px-6 text-right whitespace-nowrap">${actionButtons}</td>
+          `;
+        } else {
+          const simpleStatusBadge = item.submitted ? `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 ring-1 ring-emerald-600/10 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 제출 완료
+            </span>
+          ` : `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400 ring-1 ring-slate-400/10 whitespace-nowrap">
+              <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> 미제출
+            </span>
+          `;
+
+          let remarkText = ``;
+          if (item.submitted) {
+            if (item.status === '승인 완료') {
+              remarkText = `<span class="inline-flex items-center gap-1 px-2.5 py-1 text-emerald-600 bg-emerald-50/50 border border-emerald-100 rounded-lg font-bold text-[11px] whitespace-nowrap">확인완료</span>`;
+            } else {
+              remarkText = `<span class="inline-flex items-center gap-1 px-2.5 py-1 text-amber-600 bg-amber-50/50 border border-amber-100 rounded-lg font-bold text-[11px] whitespace-nowrap">확인 중</span>`;
+            }
+          } else {
+            remarkText = `<span class="text-indigo-500 font-bold text-[11px] whitespace-nowrap">정산 필요</span>`;
+          }
+
+          tr.innerHTML = `
+            <td class="py-4 px-6 font-semibold text-slate-800 whitespace-nowrap">${item.name}</td>
+            <td class="py-4 px-6 whitespace-nowrap">${simpleStatusBadge}</td>
+            <td class="py-4 px-6 text-right whitespace-nowrap">${remarkText}</td>
+          `;
+        }
+
+        bodyRows.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function getStatusBadgeClass(status) {
+      if (status === '승인 완료') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15">승인 완료</span>`;
+      } else if (status === '반려됨') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-600/15">반려됨</span>`;
+      } else if (status === '대기 중') {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-600/15">검토 대기</span>`;
+      } else {
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400">대상 아님</span>`;
+      }
+    }
+
+    function updateSubmissionStatus(idx, targetStatus) {
+      const item = submissions[idx];
+      item.status = targetStatus;
+      showToast(`${item.name} 님의 조식비가 '${targetStatus}' 처리되었습니다.`, "정산 관리");
+      updateStatistics();
+      renderSubmissionsList();
+    }
+
+
+    // 8-1. REJECT / RETURN CONTROLLER WITH PASSWORD SECURITY MODAL
+    function openRejectModal(idx) {
+      pendingRejectIndex = idx;
+      document.getElementById('reject-admin-pw').value = '';
+      const modal = document.getElementById('reject-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeRejectModal() {
+      pendingRejectIndex = null;
+      document.getElementById('reject-admin-pw').value = '';
+      const modal = document.getElementById('reject-modal');
+      modal.classList.add('hidden');
+    }
+
+    function confirmRejectSubmission() {
+      if (pendingRejectIndex === null) return;
+
+      const inputPw = document.getElementById('reject-admin-pw').value.trim();
+      
+      if (inputPw === credentials.admin.pw) {
+        const targetItem = submissions[pendingRejectIndex];
+        submissions.splice(pendingRejectIndex, 1);
+        
+        showToast(`${targetItem.name} 사원의 정산 건이 반려되어 목록에서 완전히 삭제되었습니다.`, "반려 완료");
+        
+        closeRejectModal();
+        updateStatistics();
+        renderSubmissionsList();
+      } else {
+        showToast("관리자 확인 비밀번호가 일치하지 않습니다.", "인증 실패");
+      }
+    }
+
+    // 8-2. DATA RESET MODAL CONTROLLER
+    function openResetModal() {
+      document.getElementById('reset-admin-pw').value = '';
+      document.getElementById('reset-modal').classList.remove('hidden');
+    }
+
+    function closeResetModal() {
+      document.getElementById('reset-admin-pw').value = '';
+      document.getElementById('reset-modal').classList.add('hidden');
+    }
+
+    function confirmResetData() {
+      const inputPw = document.getElementById('reset-admin-pw').value.trim();
+      if (inputPw === credentials.admin.pw) {
+        submissions = []; 
+        showToast("모든 정산 기록 및 제출 서류 파일이 성공적으로 초기화되었습니다.", "정산 리셋 완료");
+        closeResetModal();
+        updateStatistics();
+        renderSubmissionsList();
+      } else {
+        showToast("관리자 확인 비밀번호가 일치하지 않습니다.", "인증 실패");
+      }
+    }
+
+    // 8-3. SUBMISSION DEADLINE CLOSE CONTROLLER
+    function toggleSubmissionsClosed() {
+      isSubmissionsClosed = !isSubmissionsClosed;
+      
+      const btnText = document.getElementById('btn-toggle-close-text');
+      const btnIcon = document.getElementById('btn-toggle-close');
+      const overlay = document.getElementById('form-locked-overlay');
+      const resetBtn = document.getElementById('btn-admin-reset');
+
+      if (isSubmissionsClosed) {
+        overlay.classList.remove('hidden');
+        btnText.innerText = "제출 접수 재개";
+        btnIcon.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
+        btnIcon.innerHTML = `<i data-lucide="unlock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 접수 재개</span>`;
+        showToast("이번 달 조식 청구 접수가 마감 처리되었습니다.", "접수 마감");
+        if (resetBtn) resetBtn.classList.remove('hidden'); 
+      } else {
+        overlay.classList.add('hidden');
+        btnText.innerText = "제출 마감하기";
+        btnIcon.className = "px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
+        btnIcon.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 마감하기</span>`;
+        showToast("조식비 청구 접수가 다시 정상 개방되었습니다.", "접수 재개");
+        if (resetBtn) resetBtn.classList.add('hidden'); 
+      }
+      lucide.createIcons();
+    }
+
+    // 8-4. SAVE NEW CREDENTIALS 
+    function saveNewCredentials() {
+      const confirmPwInput = document.getElementById('admin-confirm-pw');
+      const confirmPw = confirmPwInput.value.trim();
+
+      if (confirmPw !== credentials.admin.pw) {
+        showToast("현재 관리자 비밀번호 검증에 실패했습니다. 올바른 비밀번호를 입력하세요.", "인증 오류");
+        return;
+      }
+
+      const newAdminId = document.getElementById('admin-admin-id').value.trim();
+      const newAdminPw = document.getElementById('admin-admin-pw').value.trim();
+
+      if (!newAdminId || !newAdminPw) {
+        showToast("변경할 관리자 아이디 및 비밀번호 항목을 모두 입력해야 합니다.", "입력 요망");
+        return;
+      }
+
+      credentials.admin.id = newAdminId;
+      credentials.admin.pw = newAdminPw;
+
+      showToast("관리자 로그인 계정 정보가 성공적으로 변경되었습니다.", "설정 반영 성공");
+      confirmPwInput.value = ''; 
+    }
+
+    function simulateFileDownload(fileName) {
+      showToast(`'${fileName}' 증빙 서류 가상 다운로드 및 보안 검수 완료`, "미리보기 완료");
+    }
+
+
+    // 8-5. SMART COMPRESSION MODULE (ZIP Packaging)
+    function batchDownloadProofsZip() {
+      const submittedItems = submissions.filter(s => s.submitted && s.file);
+
+      if (submittedItems.length === 0) {
+        showToast("현재 정산 제출 완료된 증빙 서류가 존재하지 않습니다.", "다운로드 실패");
+        return;
+      }
+
+      showToast("증빙 자산 일괄 압축 빌드를 시작합니다...", "ZIP 생성 시작");
+
+      const zip = new JSZip();
+      const currentMonth = new Date().getMonth() + 1; 
+
+      submittedItems.forEach(item => {
+        const extension = item.file.substring(item.file.lastIndexOf('.'));
+        const formattedFileName = `${currentMonth}월 조식 ${item.name}${extension}`;
+
+        if (item.fileObject) {
+          zip.file(formattedFileName, item.fileObject);
+        } else {
+          zip.file(formattedFileName, `[정산 증빙] May Breakfast Receipt Data Mockup\nName: ${item.name}\nAmount: ${item.amount.toLocaleString()} KRW\nSubmitted Date: ${item.date}`);
+        }
+      });
+
+      zip.generateAsync({ type: "blob" }).then(function(content) {
+        const element = document.createElement("a");
+        element.href = URL.createObjectURL(content);
+        element.download = `${currentMonth}월_조식비_정산_증빙모음_울산사업팀.zip`;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        showToast("모든 증빙 영수증이 일목요연하게 압축되어 다운로드되었습니다.", "일괄 다운로드 완료");
+      }).catch(err => {
+        showToast("압축 패키징 중 오류가 발생했습니다: " + err, "시스템 오류");
+      });
+    }
+
+
+    // ==================== 10. PREMIUM DYNAMIC CALENDAR ENGINE ====================
+    function renderCalendar() {
+      const year = calendarDate.getFullYear();
+      const month = calendarDate.getMonth();
+
+      // 달력 헤더 업데이트
+      const formattedMonth = String(month + 1).padStart(2, '0');
+      document.getElementById('calendar-header-title').innerText = `${year}년 ${formattedMonth}월`;
+
+      const gridContainer = document.getElementById('calendar-days-grid');
+      if (!gridContainer) return;
+      gridContainer.innerHTML = '';
+
+      // 달의 첫날과 마지막 날 정보 계산
+      const firstDayIndex = new Date(year, month, 1).getDay(); // 시작 요일 (0: 일, 6: 토)
+      const lastDate = new Date(year, month + 1, 0).getDate(); // 당월 총 일수
+      const prevLastDate = new Date(year, month, 0).getDate(); // 이전 달 총 일수
+
+      // 2026년 대한민국 법정 공휴일 & 대체공휴일 데이터베이스 (빨간날 자동 표기용)
+      const holidays2026 = {
+        "01-01": "신정",
+        "02-16": "설날 연휴",
+        "02-17": "설날",
+        "02-18": "설날 연휴",
+        "03-01": "삼일절",
+        "03-02": "대체공휴일",
+        "05-01": "근로자의 날",
+        "05-05": "어린이날",
+        "05-24": "석가탄신일",
+        "05-25": "대체공휴일",
+        "06-03": "지방선거",
+        "06-06": "현충일",
+        "07-17": "제헌절",
+        "08-15": "광복절",
+        "08-17": "대체공휴일",
+        "09-24": "추석 연휴",
+        "09-25": "추석",
+        "09-26": "추석 연휴",
+        "10-03": "개천절",
+        "10-05": "대체공휴일",
+        "10-09": "한글날",
+        "12-25": "성탄절"
+      };
+
+      // 1) 이전 달 날짜 채우기 (비활성화 스타일)
+      for (let i = firstDayIndex; i > 0; i--) {
+        const d = prevLastDate - i + 1;
+        const cell = document.createElement('div');
+        cell.className = "min-h-[110px] p-2 bg-slate-50/40 text-slate-300 border-b border-r border-slate-100 flex flex-col justify-between cursor-not-allowed select-none";
+        cell.innerHTML = `<span class="text-[10px] font-mono font-medium">${d}</span>`;
+        gridContainer.appendChild(cell);
+      }
+
+      // 2) 현재 달 실제 날짜 채우기
+      const today = new Date();
+      for (let day = 1; day <= lastDate; day++) {
+        const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayOfWeek = new Date(year, month, day).getDay();
+
+        // 오늘 날짜 하이라이트 검증
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+
+        // 공휴일 여부 체크 (MM-DD 문자열 포맷팅 매칭)
+        const dateKey = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const holidayName = holidays2026[dateKey];
+        const isHoliday = !!holidayName;
+
+        const cell = document.createElement('div');
+        cell.className = `min-h-[110px] p-2 bg-white hover:bg-slate-50/80 transition border-b border-r border-slate-100 flex flex-col justify-between cursor-pointer group relative`;
+        cell.setAttribute('onclick', `openScheduleModal('${cellDateStr}')`);
+
+        // 요일별 & 공휴일별 날짜 텍스트 빨간날 자동 색상 분기
+        let dayColorClass = "text-slate-600";
+        if (dayOfWeek === 0 || isHoliday) {
+          dayColorClass = "text-rose-500 font-semibold"; // 일요일 및 공휴일은 빨간색
+        } else if (dayOfWeek === 6) {
+          dayColorClass = "text-indigo-500 font-semibold"; // 토요일은 파란색
+        }
+
+        // 오늘 날짜 하이라이트 디자인 서클
+        const todayBadge = isToday 
+          ? `<span class="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-mono font-bold shadow-xs">${day}</span>` 
+          : `<span class="text-[11px] font-mono font-semibold ${dayColorClass}">${day}</span>`;
+
+        // 공휴일 뱃지 라벨
+        const holidayLabel = isHoliday 
+          ? `<span class="text-[9px] text-rose-500 font-bold leading-none truncate block mt-0.5" title="${holidayName}">${holidayName}</span>` 
+          : '';
+
+        // 해당 날짜에 할당된 가상 일정 바인딩
+        let eventsHtml = "";
+        const events = schedulesDb[cellDateStr] || [];
+        if (events.length > 0) {
+          eventsHtml = `<div class="space-y-1 mt-1 max-h-[60px] overflow-hidden">`;
+          events.forEach((evt, idx) => {
+            const colorClass = getEventColorClass(evt.color);
+            eventsHtml += `
+              <div class="px-1.5 py-0.5 rounded text-[9px] font-medium truncate ${colorClass}" title="${evt.text}">
+                ${evt.text}
+              </div>
+            `;
+          });
+          eventsHtml += `</div>`;
+        }
+
+        cell.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div class="flex flex-col items-start leading-none gap-0.5">
+              ${todayBadge}
+              ${holidayLabel}
+            </div>
+            ${events.length > 0 ? `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>` : ''}
+          </div>
+          ${eventsHtml}
+          <!-- 마우스 호버 시 일정 편집 유도 아이콘 노출 -->
+          <span class="absolute bottom-1 right-1.5 opacity-0 group-hover:opacity-100 transition text-slate-300">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+          </span>
+        `;
+
+        gridContainer.appendChild(cell);
+      }
+
+      // 3) 다음 달 날짜 채우기 (달력이 7열 바둑판 형태로 고르게 끝맺음되도록)
+      const totalCells = firstDayIndex + lastDate;
+      const nextDaysNeeded = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+      for (let d = 1; d <= nextDaysNeeded; d++) {
+        const cell = document.createElement('div');
+        cell.className = "min-h-[110px] p-2 bg-slate-50/40 text-slate-300 border-b border-r border-slate-100 flex flex-col justify-between cursor-not-allowed select-none";
+        cell.innerHTML = `<span class="text-[10px] font-mono font-medium">${d}</span>`;
+        gridContainer.appendChild(cell);
+      }
+
+      lucide.createIcons();
+    }
+
+    // 일정 색상 클래스 맵
+    function getEventColorClass(color) {
+      switch (color) {
+        case 'emerald': return 'bg-emerald-50 border border-emerald-100 text-emerald-700';
+        case 'rose': return 'bg-rose-50 border border-rose-100 text-rose-700';
+        case 'amber': return 'bg-amber-50 border border-amber-100 text-amber-700';
+        case 'indigo':
+        default:
+          return 'bg-indigo-50 border border-indigo-100 text-indigo-700';
+      }
+    }
+
+    // 달력 이전달/다음달 이동 제어
+    function changeCalendarMonth(offset) {
+      calendarDate.setMonth(calendarDate.getMonth() + offset);
+      renderCalendar();
+    }
+
+
+    // ==================== 11. SCHEDULE DETAIL MODAL CONTROLLER ====================
+    function openScheduleModal(dateStr) {
+      selectedCalendarDateString = dateStr;
+      document.getElementById('schedule-modal-date').innerText = dateStr;
+      document.getElementById('schedule-new-text').value = '';
+      
+      renderModalEventList();
+      
+      document.getElementById('schedule-modal').classList.remove('hidden');
+    }
+
+    function closeScheduleModal() {
+      document.getElementById('schedule-modal').classList.add('hidden');
+      selectedCalendarDateString = "";
+    }
+
+    // 모달 내부 일정 리스트 실시간 렌더링
+    function renderModalEventList() {
+      const listContainer = document.getElementById('modal-schedule-list');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = '';
+      const events = schedulesDb[selectedCalendarDateString] || [];
+
+      if (events.length === 0) {
+        listContainer.innerHTML = `<span class="text-[10px] text-slate-400 block text-center py-4">등록된 일정이 없습니다.</span>`;
+        return;
+      }
+
+      events.forEach((evt, idx) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-1.5 rounded-lg bg-white border border-slate-100 shadow-2xs";
+        
+        let colorDot = 'bg-indigo-500';
+        if (evt.color === 'emerald') colorDot = 'bg-emerald-500';
+        else if (evt.color === 'rose') colorDot = 'bg-rose-500';
+        else if (evt.color === 'amber') colorDot = 'bg-amber-500';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2 h-2 rounded-full ${colorDot} shrink-0"></span>
+            <span class="text-xs text-slate-700 font-medium truncate">${evt.text}</span>
+          </div>
+          <button onclick="deleteCalendarEvent(${idx})" class="text-slate-400 hover:text-rose-500 p-1 rounded-md transition hover:bg-slate-50">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      lucide.createIcons();
+    }
+
+    // 일정 추가 기능
+    function addCalendarEvent() {
+      const textInput = document.getElementById('schedule-new-text');
+      const text = textInput.value.trim();
+
+      if (!text) {
+        showToast("일정 내용을 입력하세요.", "입력 누락");
+        return;
+      }
+
+      const colorRadios = document.getElementsByName('schedule-color');
+      let selectedColor = 'indigo';
+      for (const rad of colorRadios) {
+        if (rad.checked) {
+          selectedColor = rad.value;
+          break;
+        }
+      }
+
+      if (!schedulesDb[selectedCalendarDateString]) {
+        schedulesDb[selectedCalendarDateString] = [];
+      }
+
+      schedulesDb[selectedCalendarDateString].push({
+        text: text,
+        color: selectedColor
+      });
+
+      showToast("새로운 일정을 캘린더에 기입 완료했습니다.", "일정 등록");
+      textInput.value = '';
+      
+      renderModalEventList();
+      renderCalendar(); // 백그라운드 달력 뷰 업데이트
+    }
+
+    // 일정 삭제 기능
+    function deleteCalendarEvent(idx) {
+      if (!selectedCalendarDateString || !schedulesDb[selectedCalendarDateString]) return;
+
+      const deletedItemName = schedulesDb[selectedCalendarDateString][idx].text;
+      schedulesDb[selectedCalendarDateString].splice(idx, 1);
+
+      if (schedulesDb[selectedCalendarDateString].length === 0) {
+        delete schedulesDb[selectedCalendarDateString];
+      }
+
+      showToast(`'${deletedItemName}' 일정이 삭제되었습니다.`, "일정 삭제");
+      renderModalEventList();
+      renderCalendar();
+    }
+
+    // ==================== 12. PREMIUM COHESIVE SLIDE TOAST ====================
+    function showToast(message, type = "안내") {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = "flex items-center gap-3 bg-white border border-slate-200 shadow-xl px-4.5 py-3 rounded-xl pointer-events-auto transform translate-y-4 opacity-0 transition-all duration-300 min-w-[280px] max-w-sm z-50";
+      toast.innerHTML = `
+        <div class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></div>
+        <div class="flex-1">
+          <div class="text-[10px] text-slate-400 font-bold tracking-wide uppercase">${type}</div>
+          <div class="text-xs text-slate-700 font-medium mt-0.5 leading-normal">${message}</div>
+        </div>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.className = toast.className.replace("translate-y-4 opacity-0", "translate-y-0 opacity-100");
+      }, 50);
+
+      setTimeout(() => {
+        toast.className = toast.className.replace("translate-y-0 opacity-100", "translate-y-2 opacity-0");
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3000);
+    }
+  </script>
 </body>
 </html>
