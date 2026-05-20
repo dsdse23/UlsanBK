@@ -18,13 +18,45 @@
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" />
 
   <style>
+    /* 크로스 브라우저 렌더링 최적화 및 폰트 부드럽게 설정 */
     body {
-      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: #f8fafc;
       color: #0f172a;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
     }
-    
+
+    /* 브라우저 간 기본 박스모델 및 디폴트 패딩 표준화 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* 엣지(Edge) 브라우저 전용 인풋 내장 가상 삭제(X) 및 비밀번호 표시 눈 아이콘 비활성화 */
+    input::-ms-clear,
+    input::-ms-reveal {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
+    /* 크롬, 사파리, 엣지용 숫자 입력칸 스핀 버튼 제거 */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* 파이어폭스용 숫자 입력칸 스핀 버튼 제거 */
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    /* 크롬/사파리/엣지 웹킷 커스텀 스크롤바 */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -38,6 +70,12 @@
     }
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
+    }
+
+    /* 파이어폭스용 표준 스크롤바 규격 통일 */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
     }
 
     /* 사이드바 개폐를 위한 부드러운 하드웨어 가속 트랜지션 */
@@ -316,8 +354,8 @@
           
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-2xl font-bold tracking-tight text-slate-900">이번 달 조식비 정산 청구</h2>
-              <p class="text-sm text-slate-500 mt-1">개별 사용한 실 조식비를 합산하여 영수증 증빙 파일과 함께 제출해 주십시오.</p>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900 font-semibold">이번 달 조식비 정산 청구</h2>
+              <p class="text-sm text-slate-500 mt-1 font-medium">개별 사용한 실 조식비를 합산하여 영수증 증빙 파일과 함께 제출해 주십시오.</p>
             </div>
             
             <!-- Admin Close Controls -->
@@ -407,7 +445,7 @@
               
               <div>
                 <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2 font-semibold">
                     <i data-lucide="list-checks" class="w-4 h-4 text-slate-500"></i> 전체 정산 제출 명단
                   </h3>
                   
@@ -448,7 +486,7 @@
         <section id="page-schedule" class="hidden space-y-6">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 class="text-2xl font-bold tracking-tight text-slate-900">당월 정산 및 일정 관리표</h2>
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900 font-semibold">당월 정산 및 일정 관리표</h2>
               <p class="text-sm text-slate-500 mt-1">부서 관리 일정을 등록하고 공유 일정표를 관리하십시오.</p>
             </div>
             
@@ -569,7 +607,7 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-md w-full space-y-4">
       <div class="flex items-center justify-between pb-2 border-b border-slate-100">
         <div>
-          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5 font-semibold">
             <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-600"></i> 일정 등록 및 관리
           </h3>
           <span id="schedule-modal-date" class="text-[11px] font-mono text-slate-400 mt-0.5 block">2026-05-20</span>
@@ -820,10 +858,6 @@
         if (adminAccountPanel) adminAccountPanel.classList.remove('hidden');
         if (adminDlBtn) adminDlBtn.classList.remove('hidden');
         if (navSchedule) navSchedule.classList.remove('hidden'); 
-
-        document.getElementById('admin-admin-id').value = credentials.admin.id;
-        document.getElementById('admin-admin-pw').value = credentials.admin.pw;
-        document.getElementById('admin-confirm-pw').value = '';
       } else {
         roleBadge.innerText = "울산사업팀";
         roleBadge.className = "px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs text-indigo-600 font-semibold";
@@ -1196,6 +1230,7 @@
       }
     }
 
+    // 초기화 모달 및 초기화 기능
     function openResetModal() {
       document.getElementById('reset-admin-pw').value = '';
       document.getElementById('reset-modal').classList.remove('hidden');
@@ -1498,7 +1533,7 @@
       const events = schedulesDb[selectedCalendarDateString] || [];
 
       if (events.length === 0) {
-        listContainer.innerHTML = `<span class="text-[10px] text-slate-400 block text-center py-4">등록된 일정이 없습니다.</span>`;
+        listContainer.innerHTML = `<span class="text-[10px] text-slate-400 block text-center py-4 font-semibold">등록된 일정이 없습니다.</span>`;
         return;
       }
 
