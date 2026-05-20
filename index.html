@@ -635,8 +635,41 @@
 
   <!-- ==================== JAVASCRIPT & STATE MANAGEMENT ==================== -->
   <script>
-    
-    // 1. APP STATE
+    // iframe sandbox 환경에서 localStorage 보안 차단 현상이 생기더라도 멈춤 없이 메모리(Memory)에 가상 임시 저장하여 시뮬레이션을 완벽히 유지해 줍니다.
+    const SecureStorage = {
+      isLocalStorageSupported: null,
+      test() {
+        if (this.isLocalStorageSupported !== null) return this.isLocalStorageSupported;
+        try {
+          localStorage.setItem('__ulsan_secure_test__', 'test');
+          localStorage.removeItem('__ulsan_secure_test__');
+          this.isLocalStorageSupported = true;
+        } catch (e) {
+          this.isLocalStorageSupported = false;
+          console.warn("브라우저 보안 정책(Iframe Sandboxing)으로 인해 로컬 저장소 접근이 거부되었습니다. 가상 인메모리 저장소로 자동 전환합니다.");
+        }
+        return this.isLocalStorageSupported;
+      },
+      // 가상 임시 메모리 저장 탱크
+      memoryDb: {},
+      getItem(key) {
+        if (this.test()) {
+          return localStorage.getItem(key);
+        }
+        return this.memoryDb[key] || null;
+      },
+      setItem(key, value) {
+        if (this.test()) {
+          try {
+            localStorage.setItem(key, value);
+            return;
+          } catch (e) {}
+        }
+        this.memoryDb[key] = value;
+      }
+    };
+
+    // APP STATE
     let currentUser = null; 
     let selectedFile = null; 
     let isSubmissionsClosed = false; 
@@ -656,7 +689,7 @@
     // 가상 청구 데이터 리스트
     let submissions = [];
 
-    // 가상 일정(스케줄) 데이터 베이스 - 사용자의 요청에 따라 모든 예시 데이터 제거 후 완전 포맷팅
+    // 가상 일정(스케줄) 데이터 베이스
     let schedulesDb = {};
 
     // 제출 명단을 가나다(ㄱㄴㄷ) 순으로 자동 정렬하는 함수
@@ -665,10 +698,10 @@
     }
 
     window.onload = function() {
-      loadState(); // 1. 브라우저 저장 상태 자동 복구 (로그인 세션 제외)
+      loadState(); // 브라우저 저장 상태 자동 복구 (로그인 세션 제외)
       lucide.createIcons();
 
-      // 접속 시 무조건 세션을 파기하고 첫 로그인 화면이 나타나도록 강제 설정
+      // 접속 시 보안을 위해 무조건 이전 로그인 세션을 해제하고 로그인 첫 화면으로 강제 유도
       currentUser = null;
       document.getElementById('app-layout').classList.add('hidden');
       document.getElementById('login-screen').classList.remove('hidden');
@@ -676,22 +709,20 @@
 
     function saveState() {
       try {
-        // fileObject(Blob 객체)는 JSON 직렬화가 불가하므로 메타데이터 이름만 남겨두고 저장
+        // fileObject(Blob 객체)는 JSON 직렬화가 불가하므로 메타데이터 이름만 남겨두고 복사하여 영구 보존
         const submissionsToSave = submissions.map(s => {
           const { fileObject, ...rest } = s;
           return rest;
         });
 
-        localStorage.setItem('ulsan_breakfast_submissions', JSON.stringify(submissionsToSave));
-        localStorage.setItem('ulsan_breakfast_schedules', JSON.stringify(schedulesDb));
-        localStorage.setItem('ulsan_breakfast_credentials', JSON.stringify(credentials));
-        localStorage.setItem('ulsan_breakfast_config', JSON.stringify({
+        SecureStorage.setItem('ulsan_breakfast_submissions', JSON.stringify(submissionsToSave));
+        SecureStorage.setItem('ulsan_breakfast_schedules', JSON.stringify(schedulesDb));
+        SecureStorage.setItem('ulsan_breakfast_credentials', JSON.stringify(credentials));
+        SecureStorage.setItem('ulsan_breakfast_config', JSON.stringify({
           totalHeadcount,
           deadlineText,
           isSubmissionsClosed
         }));
-        
-        // 자동 로그인 방지를 위해 세션을 localStorage에 저장하지 않음
       } catch (e) {
         console.error("데이터 저장 중 오류가 발생했습니다:", e);
       }
@@ -699,38 +730,34 @@
 
     function loadState() {
       try {
-        const savedSubmissions = localStorage.getItem('ulsan_breakfast_submissions');
+        const savedSubmissions = SecureStorage.getItem('ulsan_breakfast_submissions');
         if (savedSubmissions) {
           submissions = JSON.parse(savedSubmissions);
           sortSubmissions(); // 로드 시 가나다 순 정렬 보장
         }
 
-        const savedSchedules = localStorage.getItem('ulsan_breakfast_schedules');
+        const savedSchedules = SecureStorage.getItem('ulsan_breakfast_schedules');
         if (savedSchedules) {
           schedulesDb = JSON.parse(savedSchedules);
         }
 
-        const savedCredentials = localStorage.getItem('ulsan_breakfast_credentials');
+        const savedCredentials = SecureStorage.getItem('ulsan_breakfast_credentials');
         if (savedCredentials) {
           credentials = JSON.parse(savedCredentials);
         }
 
-        const savedConfig = localStorage.getItem('ulsan_breakfast_config');
+        const savedConfig = SecureStorage.getItem('ulsan_breakfast_config');
         if (savedConfig) {
           const config = JSON.parse(savedConfig);
           totalHeadcount = config.totalHeadcount ?? 12;
           deadlineText = config.deadlineText ?? "5월 25일";
           isSubmissionsClosed = config.isSubmissionsClosed ?? false;
         }
-
-        // 세션 데이터 로드 코드 제거
       } catch (e) {
         console.error("데이터 로드 중 오류가 발생했습니다:", e);
       }
     }
 
-
-    // 2. LOGIN CONTROLLER
     function handleGuestLogin() {
       currentUser = {
         id: 'guest_user',
@@ -767,12 +794,10 @@
       document.getElementById('login-screen').classList.remove('hidden');
       document.getElementById('login-id').value = '';
       document.getElementById('login-pw').value = '';
-      saveState(); // 세션 파기 반영
+      saveState(); // 세션 해제 반영
       showToast("보안 세션이 파기되었습니다.", "로그아웃");
     }
 
-
-    // 3. ENTER APPLICATION & SETUP INTERFACE
     function enterApp() {
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app-layout').classList.remove('hidden');
@@ -827,11 +852,10 @@
       }
 
       document.getElementById('input-name').value = '';
-      saveState(); // 세션 지속성 반영
+      saveState(); 
       switchTab('dashboard');
     }
 
-    // 3-1. ADMIN CONFIG PANEL CONTROLLER
     function saveAdminConfig() {
       const headcountInput = document.getElementById('admin-input-headcount');
       const deadlineInput = document.getElementById('admin-input-deadline');
@@ -846,11 +870,10 @@
       document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
       document.getElementById('deadline-display').innerText = deadlineText;
       
-      saveState(); // 바뀐 정산 일정 및 인원 정보 영구 저장
+      saveState(); // 정산 마감 세부 정보 저장
       showToast("정산 기준 정보가 성공적으로 저장되었습니다.", "설정 저장");
     }
 
-    // 4. TAB CONTROLLER
     function switchTab(tabId) {
       document.getElementById('page-dashboard').classList.add('hidden');
       document.getElementById('page-breakfast').classList.add('hidden');
@@ -890,7 +913,6 @@
       }
     }
 
-    // 4-1. GLOBAL COLLAPSIBLE SIDEBAR TOGGLER
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
       const mainContent = document.querySelector('#app-layout > div.flex-1');
@@ -916,8 +938,6 @@
       }
     }
 
-
-    // 5. FILE UPLOAD CONTROLLER
     function triggerFileSelect() {
       if (isSubmissionsClosed) return;
       document.getElementById('real-file-input').click();
@@ -969,8 +989,6 @@
       }
     }
 
-
-    // 6. FORM SUBMISSION
     function submitBreakfastReceipt() {
       if (isSubmissionsClosed) {
         showToast("정산이 마감되어 현재 제출할 수 없습니다.", "제출 불가");
@@ -1015,7 +1033,7 @@
         submissions.unshift(newSubmission);
       }
 
-      sortSubmissions(); // 새로운 제출 등록 시 실시간 가나다 정렬 수행
+      sortSubmissions(); // 새로운 제출 등록 시 실시간 가나다 정렬
 
       showToast(`${rawName} 님의 정산 청구서 수신이 완료되었습니다.`, "제출 성공");
 
@@ -1023,12 +1041,11 @@
       document.getElementById('input-amount').value = '';
       removeSelectedFile();
 
-      saveState(); // 제출 완료 저장
+      saveState(); 
       updateStatistics();
       renderSubmissionsList();
     }
 
-    // 7. STATS AND DASHBOARD SYNCHRONIZER
     function updateStatistics() {
       const activeSubmittedCount = submissions.filter(s => s.submitted).length;
       const totalCalculatedAmount = activeSubmittedCount * 50000;
@@ -1051,8 +1068,6 @@
       }
     }
 
-
-    // 8. DYNAMIC TABLE RENDERER
     function renderSubmissionsList() {
       const headerRow = document.getElementById('table-header-row');
       const bodyRows = document.getElementById('table-body-rows');
@@ -1157,13 +1172,11 @@
       const item = submissions[idx];
       item.status = targetStatus;
       showToast(`${item.name} 님의 조식비가 '${targetStatus}' 처리되었습니다.`, "정산 관리");
-      saveState(); // 상태 변경 완료 후 저장
+      saveState(); 
       updateStatistics();
       renderSubmissionsList();
     }
 
-
-    // 8-1. REJECT / RETURN CONTROLLER WITH PASSWORD SECURITY MODAL
     function openRejectModal(idx) {
       pendingRejectIndex = idx;
       document.getElementById('reject-admin-pw').value = '';
@@ -1189,7 +1202,7 @@
         
         showToast(`${targetItem.name} 사원의 정산 건이 반려되어 목록에서 완전히 삭제되었습니다.`, "반려 완료");
         
-        saveState(); // 반려 완료 후 가상DB 동기화 및 저장
+        saveState(); 
         closeRejectModal();
         updateStatistics();
         renderSubmissionsList();
@@ -1198,7 +1211,6 @@
       }
     }
 
-    // 8-2. DATA RESET MODAL CONTROLLER
     function openResetModal() {
       document.getElementById('reset-admin-pw').value = '';
       document.getElementById('reset-modal').classList.remove('hidden');
@@ -1214,7 +1226,7 @@
       if (inputPw === credentials.admin.pw) {
         submissions = []; 
         showToast("모든 정산 기록 및 제출 서류 파일이 성공적으로 초기화되었습니다.", "정산 리셋 완료");
-        saveState(); // 데이터 전체 밀어버린 후 저장
+        saveState(); 
         closeResetModal();
         updateStatistics();
         renderSubmissionsList();
@@ -1223,7 +1235,6 @@
       }
     }
 
-    // 8-3. SUBMISSION DEADLINE CLOSE CONTROLLER
     function applySubmissionsClosedState() {
       const btnText = document.getElementById('btn-toggle-close-text');
       const btnIcon = document.getElementById('btn-toggle-close');
@@ -1257,10 +1268,9 @@
       } else {
         showToast("조식비 청구 접수가 다시 정상 개방되었습니다.", "접수 재개");
       }
-      saveState(); // 마감 토글값 브라우저 저장
+      saveState(); 
     }
 
-    // 8-4. SAVE NEW CREDENTIALS 
     function saveNewCredentials() {
       const confirmPwInput = document.getElementById('admin-confirm-pw');
       const confirmPw = confirmPwInput.value.trim();
@@ -1283,15 +1293,13 @@
 
       showToast("관리자 로그인 계정 정보가 성공적으로 변경되었습니다.", "설정 반영 성공");
       confirmPwInput.value = ''; 
-      saveState(); // 변경된 계정 정보 동기화 및 로컬스토리지 보존
+      saveState(); 
     }
 
     function simulateFileDownload(fileName) {
       showToast(`'${fileName}' 증빙 서류 가상 다운로드 및 보안 검수 완료`, "미리보기 완료");
     }
 
-
-    // 8-5. SMART COMPRESSION MODULE (ZIP Packaging)
     function batchDownloadProofsZip() {
       const submittedItems = submissions.filter(s => s.submitted && s.file);
 
@@ -1329,13 +1337,10 @@
       });
     }
 
-
-    // ==================== 10. PREMIUM DYNAMIC CALENDAR ENGINE ====================
     function renderCalendar() {
       const year = calendarDate.getFullYear();
       const month = calendarDate.getMonth();
 
-      // 달력 헤더 업데이트
       const formattedMonth = String(month + 1).padStart(2, '0');
       document.getElementById('calendar-header-title').innerText = `${year}년 ${formattedMonth}월`;
 
@@ -1343,12 +1348,10 @@
       if (!gridContainer) return;
       gridContainer.innerHTML = '';
 
-      // 달의 첫날과 마지막 날 정보 계산
-      const firstDayIndex = new Date(year, month, 1).getDay(); // 시작 요일 (0: 일, 6: 토)
-      const lastDate = new Date(year, month + 1, 0).getDate(); // 당월 총 일수
-      const prevLastDate = new Date(year, month, 0).getDate(); // 이전 달 총 일수
+      const firstDayIndex = new Date(year, month, 1).getDay(); 
+      const lastDate = new Date(year, month + 1, 0).getDate(); 
+      const prevLastDate = new Date(year, month, 0).getDate(); 
 
-      // 2026년 대한민국 법정 공휴일 & 대체공휴일 데이터베이스 (빨간날 자동 표기용)
       const holidays2026 = {
         "01-01": "신정",
         "02-16": "설날 연휴",
@@ -1374,7 +1377,7 @@
         "12-25": "성탄절"
       };
 
-      // 1) 이전 달 날짜 채우기 (비활성화 스타일)
+      // 1) 이전 달 날짜 채우기
       for (let i = firstDayIndex; i > 0; i--) {
         const d = prevLastDate - i + 1;
         const cell = document.createElement('div');
@@ -1389,10 +1392,8 @@
         const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayOfWeek = new Date(year, month, day).getDay();
 
-        // 오늘 날짜 하이라이트 검증
         const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
 
-        // 공휴일 여부 체크 (MM-DD 문자열 포맷팅 매칭)
         const dateKey = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const holidayName = holidays2026[dateKey];
         const isHoliday = !!holidayName;
@@ -1401,25 +1402,21 @@
         cell.className = `min-h-[110px] p-2 bg-white hover:bg-slate-50/80 transition border-b border-r border-slate-100 flex flex-col justify-between cursor-pointer group relative`;
         cell.setAttribute('onclick', `openScheduleModal('${cellDateStr}')`);
 
-        // 요일별 & 공휴일별 날짜 텍스트 빨간날 자동 색상 분기
         let dayColorClass = "text-slate-600";
         if (dayOfWeek === 0 || isHoliday) {
-          dayColorClass = "text-rose-500 font-semibold"; // 일요일 및 공휴일은 빨간색
+          dayColorClass = "text-rose-500 font-semibold"; 
         } else if (dayOfWeek === 6) {
-          dayColorClass = "text-indigo-500 font-semibold"; // 토요일은 파란색
+          dayColorClass = "text-indigo-500 font-semibold"; 
         }
 
-        // 오늘 날짜 하이라이트 디자인 서클
         const todayBadge = isToday 
           ? `<span class="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-mono font-bold shadow-xs">${day}</span>` 
           : `<span class="text-[11px] font-mono font-semibold ${dayColorClass}">${day}</span>`;
 
-        // 공휴일 뱃지 라벨
         const holidayLabel = isHoliday 
           ? `<span class="text-[9px] text-rose-500 font-bold leading-none truncate block mt-0.5" title="${holidayName}">${holidayName}</span>` 
           : '';
 
-        // 해당 날짜에 할당된 가상 일정 바인딩
         let eventsHtml = "";
         const events = schedulesDb[cellDateStr] || [];
         if (events.length > 0) {
@@ -1444,7 +1441,6 @@
             ${events.length > 0 ? `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>` : ''}
           </div>
           ${eventsHtml}
-          <!-- 마우스 호버 시 일정 편집 유도 아이콘 노출 -->
           <span class="absolute bottom-1 right-1.5 opacity-0 group-hover:opacity-100 transition text-slate-300">
             <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
           </span>
@@ -1453,7 +1449,7 @@
         gridContainer.appendChild(cell);
       }
 
-      // 3) 다음 달 날짜 채우기 (달력이 7열 바둑판 형태로 고르게 끝맺음되도록)
+      // 3) 다음 달 날짜 채우기
       const totalCells = firstDayIndex + lastDate;
       const nextDaysNeeded = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
       for (let d = 1; d <= nextDaysNeeded; d++) {
@@ -1466,7 +1462,6 @@
       lucide.createIcons();
     }
 
-    // 일정 색상 클래스 맵
     function getEventColorClass(color) {
       switch (color) {
         case 'emerald': return 'bg-emerald-50 border border-emerald-100 text-emerald-700';
@@ -1478,14 +1473,11 @@
       }
     }
 
-    // 달력 이전달/다음달 이동 제어
     function changeCalendarMonth(offset) {
       calendarDate.setMonth(calendarDate.getMonth() + offset);
       renderCalendar();
     }
 
-
-    // ==================== 11. SCHEDULE DETAIL MODAL CONTROLLER ====================
     function openScheduleModal(dateStr) {
       selectedCalendarDateString = dateStr;
       document.getElementById('schedule-modal-date').innerText = dateStr;
@@ -1501,7 +1493,6 @@
       selectedCalendarDateString = "";
     }
 
-    // 모달 내부 일정 리스트 실시간 렌더링
     function renderModalEventList() {
       const listContainer = document.getElementById('modal-schedule-list');
       if (!listContainer) return;
@@ -1538,7 +1529,6 @@
       lucide.createIcons();
     }
 
-    // 일정 추가 기능
     function addCalendarEvent() {
       const textInput = document.getElementById('schedule-new-text');
       const text = textInput.value.trim();
@@ -1569,12 +1559,11 @@
       showToast("새로운 일정을 캘린더에 기입 완료했습니다.", "일정 등록");
       textInput.value = '';
       
-      saveState(); // 스케줄 추가 사항 영구 저장
+      saveState(); 
       renderModalEventList();
-      renderCalendar(); // 백그라운드 달력 뷰 업데이트
+      renderCalendar(); 
     }
 
-    // 일정 삭제 기능
     function deleteCalendarEvent(idx) {
       if (!selectedCalendarDateString || !schedulesDb[selectedCalendarDateString]) return;
 
@@ -1586,12 +1575,11 @@
       }
 
       showToast(`'${deletedItemName}' 일정이 삭제되었습니다.`, "일정 삭제");
-      saveState(); // 스케줄 삭제 사항 반영 및 저장
+      saveState(); 
       renderModalEventList();
       renderCalendar();
     }
 
-    // ==================== 12. PREMIUM COHESIVE SLIDE TOAST ====================
     function showToast(message, type = "안내") {
       const container = document.getElementById('toast-container');
       if (!container) return;
