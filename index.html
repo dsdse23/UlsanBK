@@ -827,9 +827,11 @@
       })
       .then(res => {
         if (!res.ok) throw new Error("클라우드 통신 실패");
+        updateSyncBadge(true);
       })
       .catch(err => {
         console.warn("오프라인 상태 또는 원격 백업 일시 대기:", err);
+        updateSyncBadge(false);
       });
     }
 
@@ -861,13 +863,28 @@
         updateStatistics();
         renderSubmissionsList();
         applySubmissionsClosedState();
+        updateSyncBadge(true);
         if (document.getElementById('page-schedule').classList.contains('hidden') === false) {
           renderCalendar();
         }
       })
       .catch(err => {
         console.warn("실시간 연동 데이터 동기화 대기 중:", err);
+        updateSyncBadge(false);
       });
+    }
+
+    // 상단 동기화 배지 UI 제어
+    function updateSyncBadge(isOk) {
+      const badge = document.getElementById('cloud-status-badge');
+      if (!badge) return;
+      if (isOk) {
+        badge.className = "flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-xs text-emerald-600 font-semibold";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>클라우드 동기화 중</span>`;
+      } else {
+        badge.className = "flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-100 rounded-full text-xs text-amber-600 font-semibold";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-bounce"></span> <span>대기 및 로컬 저장</span>`;
+      }
     }
 
     function handleGuestLogin() {
