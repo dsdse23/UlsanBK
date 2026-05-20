@@ -659,19 +659,13 @@
     }
 
     window.onload = function() {
-      loadState(); // 1. 브라우저 저장 상태 자동 복구
+      loadState(); // 1. 브라우저 저장 상태 자동 복구 (로그인 세션 제외)
       lucide.createIcons();
 
-      // 2. 만약 자동 로그인 상태라면 대시보드 및 입력 필드 동기화
-      if (currentUser) {
-        enterApp();
-        const headcountInput = document.getElementById('admin-input-headcount');
-        const deadlineInput = document.getElementById('admin-input-deadline');
-        if (headcountInput) headcountInput.value = totalHeadcount;
-        if (deadlineInput) deadlineInput.value = deadlineText;
-        updateAdminConfig();
-        applySubmissionsClosedState();
-      }
+      // 접속 시 무조건 세션을 파기하고 첫 로그인 화면이 나타나도록 강제 설정
+      currentUser = null;
+      document.getElementById('app-layout').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
     };
 
     function saveState() {
@@ -691,11 +685,7 @@
           isSubmissionsClosed
         }));
         
-        if (currentUser) {
-          localStorage.setItem('ulsan_breakfast_session', JSON.stringify(currentUser));
-        } else {
-          localStorage.removeItem('ulsan_breakfast_session');
-        }
+        // 자동 로그인 방지를 위해 세션을 localStorage에 저장하지 않음
       } catch (e) {
         console.error("데이터 저장 중 오류가 발생했습니다:", e);
       }
@@ -727,10 +717,7 @@
           isSubmissionsClosed = config.isSubmissionsClosed ?? false;
         }
 
-        const savedSession = localStorage.getItem('ulsan_breakfast_session');
-        if (savedSession) {
-          currentUser = JSON.parse(savedSession);
-        }
+        // 세션 데이터 로드 코드 제거
       } catch (e) {
         console.error("데이터 로드 중 오류가 발생했습니다:", e);
       }
