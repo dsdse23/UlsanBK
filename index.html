@@ -194,7 +194,7 @@
         <section id="page-dashboard" class="hidden space-y-6">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2 id="welcome-message" class="text-2xl font-bold tracking-tight text-slate-900">환영합니다!</h2>
+              <h2 id="welcome-message" class="text-2xl font-bold tracking-tight text-slate-900 font-semibold">환영합니다!</h2>
               <p class="text-sm text-slate-500 mt-1">이번 달 조식비 청구 마감일은 <span class="text-rose-600 font-bold underline" id="deadline-display">5월 25일</span> 입니다. 누락 없이 증빙을 제출해 주세요.</p>
             </div>
             <div class="text-xs text-slate-400 bg-white border border-slate-200/80 px-3 py-2 rounded-lg">
@@ -208,10 +208,16 @@
               <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <i data-lucide="settings" class="text-rose-600 w-4 h-4"></i> 정산 기준 정보 설정 (관리자 전용)
               </h3>
-              <button onclick="saveAdminConfig()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
-                <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                <span>기준 정보 저장</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button onclick="openResetModal()" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>정산 데이터 초기화</span>
+                </button>
+                <button onclick="saveAdminConfig()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                  <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                  <span>기준 정보 저장</span>
+                </button>
+              </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -231,7 +237,7 @@
               <i data-lucide="key-round" class="text-indigo-600 w-4 h-4"></i> 관리자 로그인 계정 정보 수정 (관리자 전용)
             </h3>
             <div class="max-w-md p-4 bg-slate-50 border border-slate-200/60 rounded-xl space-y-3">
-              <span class="text-xs font-bold text-slate-700 block">관리자 계정 변경</span>
+              <span class="text-xs font-bold text-slate-700 block font-semibold">관리자 계정 변경</span>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[10px] font-semibold text-slate-400 mb-1">아이디</label>
@@ -297,7 +303,7 @@
             <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
               <i data-lucide="shield-alert" class="text-indigo-600 w-4 h-4"></i> 조식비 지원 정산 요령 및 규정
             </h3>
-            <ul class="space-y-2 text-xs text-slate-500 list-disc pl-5">
+            <ul class="space-y-2 text-xs text-slate-500 list-disc pl-5 font-medium">
               <li>실제 조식 관련 구매 내역 및 편의점 간편식 구매 내역만 정산이 가능합니다. (주류 및 일반 생필품 제외)</li>
               <li>첨부자료는 반드시 결제일시와 승인번호가 식별 가능한 <span class="font-semibold text-slate-800">PDF 형식의 스캔본이나 전자영수증</span>이어야 합니다.</li>
               <li>제출 후 수정이 필요할 시 <span class="font-semibold text-slate-800">관리자에게 승인 취소를 별도 요청 해주시기 바랍니다</span>.</li>
@@ -314,15 +320,11 @@
               <p class="text-sm text-slate-500 mt-1">개별 사용한 실 조식비를 합산하여 영수증 증빙 파일과 함께 제출해 주십시오.</p>
             </div>
             
-            <!-- Admin Close & Reset Controls -->
+            <!-- Admin Close Controls -->
             <div id="admin-deadline-control" class="hidden flex items-center gap-2">
               <button id="btn-toggle-close" onclick="toggleSubmissionsClosed()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
                 <i data-lucide="lock" class="w-3.5 h-3.5"></i>
                 <span id="btn-toggle-close-text">제출 마감하기</span>
-              </button>
-              <button id="btn-admin-reset" onclick="openResetModal()" class="hidden px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span>정산 데이터 초기화</span>
               </button>
             </div>
           </div>
@@ -340,7 +342,7 @@
                     <i data-lucide="lock" class="w-6 h-6"></i>
                   </div>
                   <h4 class="font-bold text-slate-900 text-sm">이번 달 조식비 정산 마감</h4>
-                  <p class="text-xs text-slate-400">정산 검수 및 입금 준비로 인해 신규 청구 접수가 조기 마감되었습니다.</p>
+                  <p class="text-xs text-slate-400 leading-relaxed">정산 검수 및 입금 준비로 인해 신규 청구 접수가 조기 마감되었습니다.</p>
                 </div>
               </div>
 
@@ -351,29 +353,29 @@
               <div class="space-y-4">
                 <!-- 이름 입력 -->
                 <div>
-                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">이름</label>
-                  <input id="input-name" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="이름을 직접 입력해 주세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium text-slate-800" />
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5 font-medium">이름</label>
+                  <input id="input-name" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="이름을 직접 입력해 주세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold text-slate-800" />
                 </div>
 
                 <!-- 실제사용금액 -->
                 <div>
-                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">실제 총 사용금액 (KRW)</label>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5 font-medium">실제 총 사용금액 (KRW)</label>
                   <div class="relative">
-                    <input id="input-amount" oninput="formatAmountInput(this)" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="원 단위 숫자로만 입력하세요" class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition" />
+                    <input id="input-amount" oninput="formatAmountInput(this)" onkeyup="if(event.key === 'Enter') submitBreakfastReceipt()" type="text" placeholder="원 단위 숫자로만 입력하세요" class="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold" />
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">원</span>
                   </div>
                 </div>
 
                 <!-- 첨부파일 (PDF 포함) -->
                 <div>
-                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">영수증 및 증빙자료 첨부</label>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5 font-medium">영수증 및 증빙자료 첨부</label>
                   <div onclick="triggerFileSelect()" id="drop-zone" class="border-2 border-dashed border-slate-200 hover:border-indigo-500 rounded-xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-slate-50/100 transition">
                     <input type="file" id="real-file-input" onchange="handleFileSelected(this)" class="hidden" accept=".pdf,image/*" />
                     <div class="space-y-2">
                       <div class="inline-flex p-2.5 bg-white border border-slate-200 text-slate-400 rounded-lg shadow-2xs">
                         <i data-lucide="upload-cloud" class="w-5 h-5"></i>
                       </div>
-                      <div class="text-xs text-slate-600">
+                      <div class="text-xs text-slate-600 font-medium">
                         <span class="font-semibold text-indigo-600">여기를 클릭하여</span> 증빙 파일 첨부
                       </div>
                       <p class="text-[10px] text-slate-400">PDF, JPG, PNG 파일 형식 지원 (최대 10MB)</p>
@@ -384,7 +386,7 @@
                   <div id="file-display-container" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
                     <div class="flex items-center gap-2.5 min-w-0">
                       <i data-lucide="file-check" id="file-icon" class="w-4 h-4 text-emerald-500 shrink-0"></i>
-                      <span id="selected-file-name" class="text-xs text-slate-700 font-medium truncate">receipt.pdf</span>
+                      <span id="selected-file-name" class="text-xs text-slate-700 font-semibold truncate">receipt.pdf</span>
                     </div>
                     <button onclick="removeSelectedFile()" class="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-rose-500 transition">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -433,7 +435,7 @@
                 </div>
               </div>
 
-              <div class="p-4 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-400">
+              <div class="p-4 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
                 <span>* 정산 금액 및 파일 증빙은 관련 사규 및 개인정보보호 규정에 의거하여 정산 담당자 계정으로 로그인 시에만 조회 권한이 개방됩니다.</span>
               </div>
 
@@ -598,22 +600,22 @@
             <label class="inline-flex items-center gap-1 cursor-pointer">
               <input type="radio" name="schedule-color" value="indigo" checked class="accent-indigo-600" />
               <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-              <span class="text-[10px] text-slate-500 font-medium">일반</span>
+              <span class="text-[10px] text-slate-500 font-semibold">일반</span>
             </label>
             <label class="inline-flex items-center gap-1 cursor-pointer">
               <input type="radio" name="schedule-color" value="emerald" class="accent-emerald-600" />
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span class="text-[10px] text-slate-500 font-medium">검수</span>
+              <span class="text-[10px] text-slate-500 font-semibold">검수</span>
             </label>
             <label class="inline-flex items-center gap-1 cursor-pointer">
               <input type="radio" name="schedule-color" value="rose" class="accent-rose-600" />
               <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-              <span class="text-[10px] text-slate-500 font-medium">마감</span>
+              <span class="text-[10px] text-slate-500 font-semibold">마감</span>
             </label>
             <label class="inline-flex items-center gap-1 cursor-pointer">
               <input type="radio" name="schedule-color" value="amber" class="accent-amber-600" />
               <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-              <span class="text-[10px] text-slate-500 font-medium">입고</span>
+              <span class="text-[10px] text-slate-500 font-semibold">입고</span>
             </label>
           </div>
         </div>
@@ -635,7 +637,7 @@
 
   <!-- ==================== JAVASCRIPT & STATE MANAGEMENT ==================== -->
   <script>
-    // iframe sandbox 환경에서 localStorage 보안 차단 현상이 생기더라도 멈춤 없이 메모리(Memory)에 가상 임시 저장하여 시뮬레이션을 완벽히 유지해 줍니다.
+    // Iframe sandbox 대응 인메모리 예외 처리 가상 로컬 스토리지 탑재
     const SecureStorage = {
       isLocalStorageSupported: null,
       test() {
@@ -646,11 +648,10 @@
           this.isLocalStorageSupported = true;
         } catch (e) {
           this.isLocalStorageSupported = false;
-          console.warn("브라우저 보안 정책(Iframe Sandboxing)으로 인해 로컬 저장소 접근이 거부되었습니다. 가상 인메모리 저장소로 자동 전환합니다.");
+          console.warn("로컬 저장소 접근이 차단되어 메모리 저장소로 자동 전환합니다.");
         }
         return this.isLocalStorageSupported;
       },
-      // 가상 임시 메모리 저장 탱크
       memoryDb: {},
       getItem(key) {
         if (this.test()) {
@@ -677,31 +678,31 @@
     let deadlineText = "5월 25일"; 
     let pendingRejectIndex = null; 
 
-    // 달력 관리 상태 변수 (기본 2026년 5월)
+    // 달력 관리 상태 (기본 2026년 5월)
     let calendarDate = new Date(2026, 4, 1); 
-    let selectedCalendarDateString = ""; // 현재 모달에서 제어 중인 날짜 키
+    let selectedCalendarDateString = ""; 
 
-    // 관리자/사용자 계정 정보
+    // 로그인 정보 기본값
     let credentials = {
       admin: { id: '0000', pw: '0000' }
     };
 
-    // 가상 청구 데이터 리스트
+    // 정산 데이터 배열
     let submissions = [];
 
-    // 가상 일정(스케줄) 데이터 베이스
+    // 일정 관리 DB
     let schedulesDb = {};
 
-    // 제출 명단을 가나다(ㄱㄴㄷ) 순으로 자동 정렬하는 함수
+    // 제출자 가나다순 정렬 함수
     function sortSubmissions() {
       submissions.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
     }
 
     window.onload = function() {
-      loadState(); // 브라우저 저장 상태 자동 복구 (로그인 세션 제외)
+      loadState(); 
       lucide.createIcons();
 
-      // 접속 시 보안을 위해 무조건 이전 로그인 세션을 해제하고 로그인 첫 화면으로 강제 유도
+      // 보안 요건: 새로고침 시 무조건 세션을 파기하여 안전하게 로그인 화면으로 복귀시킵니다.
       currentUser = null;
       document.getElementById('app-layout').classList.add('hidden');
       document.getElementById('login-screen').classList.remove('hidden');
@@ -709,13 +710,7 @@
 
     function saveState() {
       try {
-        // fileObject(Blob 객체)는 JSON 직렬화가 불가하므로 메타데이터 이름만 남겨두고 복사하여 영구 보존
-        const submissionsToSave = submissions.map(s => {
-          const { fileObject, ...rest } = s;
-          return rest;
-        });
-
-        SecureStorage.setItem('ulsan_breakfast_submissions', JSON.stringify(submissionsToSave));
+        SecureStorage.setItem('ulsan_breakfast_submissions', JSON.stringify(submissions));
         SecureStorage.setItem('ulsan_breakfast_schedules', JSON.stringify(schedulesDb));
         SecureStorage.setItem('ulsan_breakfast_credentials', JSON.stringify(credentials));
         SecureStorage.setItem('ulsan_breakfast_config', JSON.stringify({
@@ -724,7 +719,7 @@
           isSubmissionsClosed
         }));
       } catch (e) {
-        console.error("데이터 저장 중 오류가 발생했습니다:", e);
+        console.error("데이터 저장 실패:", e);
       }
     }
 
@@ -733,7 +728,7 @@
         const savedSubmissions = SecureStorage.getItem('ulsan_breakfast_submissions');
         if (savedSubmissions) {
           submissions = JSON.parse(savedSubmissions);
-          sortSubmissions(); // 로드 시 가나다 순 정렬 보장
+          sortSubmissions(); 
         }
 
         const savedSchedules = SecureStorage.getItem('ulsan_breakfast_schedules');
@@ -754,7 +749,7 @@
           isSubmissionsClosed = config.isSubmissionsClosed ?? false;
         }
       } catch (e) {
-        console.error("데이터 로드 중 오류가 발생했습니다:", e);
+        console.error("데이터 로드 실패:", e);
       }
     }
 
@@ -765,7 +760,7 @@
         role: 'user',
         avatarInit: '울산'
       };
-      showToast("울산사업팀 권한으로 접속했습니다.", "게스트 로그인");
+      showToast("울산사업팀으로 로그인 완료했습니다.", "로그인 성공");
       enterApp();
     }
 
@@ -780,10 +775,10 @@
           role: 'admin',
           avatarInit: '관리'
         };
-        showToast("관리자 권한으로 로그인했습니다.", "관리자 로그인");
+        showToast("관리자 인증에 성공했습니다.", "로그인 성공");
         enterApp();
       } else {
-        showToast("관리자 계정 정보가 올바르지 않습니다. 다시 입력해 주세요.", "로그인 실패");
+        showToast("아이디 또는 비밀번호를 다시 확인하세요.", "로그인 실패");
       }
     }
 
@@ -794,8 +789,8 @@
       document.getElementById('login-screen').classList.remove('hidden');
       document.getElementById('login-id').value = '';
       document.getElementById('login-pw').value = '';
-      saveState(); // 세션 해제 반영
-      showToast("보안 세션이 파기되었습니다.", "로그아웃");
+      saveState(); 
+      showToast("보안 로그아웃 처리되었습니다.", "로그아웃");
     }
 
     function enterApp() {
@@ -815,11 +810,8 @@
       
       if (currentUser.role === 'admin') {
         roleBadge.innerText = "관리자";
-        roleBadge.className = "px-3 py-1 bg-rose-50 border border-rose-100 rounded-full text-xs text-rose-600 font-semibold animate-pulse";
-        if (adminCtrl) {
-          adminCtrl.className = "flex items-center gap-2";
-          adminCtrl.classList.remove('hidden');
-        }
+        roleBadge.className = "px-3 py-1 bg-rose-50 border border-rose-100 rounded-full text-xs text-rose-600 font-semibold";
+        if (adminCtrl) adminCtrl.classList.remove('hidden');
         if (adminPanel) {
           adminPanel.classList.remove('hidden');
           document.getElementById('admin-input-headcount').value = totalHeadcount;
@@ -827,20 +819,11 @@
         }
         if (adminAccountPanel) adminAccountPanel.classList.remove('hidden');
         if (adminDlBtn) adminDlBtn.classList.remove('hidden');
-        if (navSchedule) navSchedule.classList.remove('hidden'); // 관리자일 때만 사이드바 메뉴 활성화
+        if (navSchedule) navSchedule.classList.remove('hidden'); 
 
         document.getElementById('admin-admin-id').value = credentials.admin.id;
         document.getElementById('admin-admin-pw').value = credentials.admin.pw;
         document.getElementById('admin-confirm-pw').value = '';
-        
-        const resetBtn = document.getElementById('btn-admin-reset');
-        if (resetBtn) {
-          if (isSubmissionsClosed) {
-            resetBtn.classList.remove('hidden');
-          } else {
-            resetBtn.classList.add('hidden');
-          }
-        }
       } else {
         roleBadge.innerText = "울산사업팀";
         roleBadge.className = "px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs text-indigo-600 font-semibold";
@@ -848,10 +831,11 @@
         if (adminPanel) adminPanel.classList.add('hidden');
         if (adminAccountPanel) adminAccountPanel.classList.add('hidden');
         if (adminDlBtn) adminDlBtn.classList.add('hidden');
-        if (navSchedule) navSchedule.classList.add('hidden'); // 일반 게스트에겐 미노출
+        if (navSchedule) navSchedule.classList.add('hidden'); 
       }
 
       document.getElementById('input-name').value = '';
+      applySubmissionsClosedState();
       saveState(); 
       switchTab('dashboard');
     }
@@ -870,8 +854,8 @@
       document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
       document.getElementById('deadline-display').innerText = deadlineText;
       
-      saveState(); // 정산 마감 세부 정보 저장
-      showToast("정산 기준 정보가 성공적으로 저장되었습니다.", "설정 저장");
+      saveState(); 
+      showToast("정산 기준 정보가 성공적으로 반영되었습니다.", "설정 저장");
     }
 
     function switchTab(tabId) {
@@ -943,17 +927,23 @@
       document.getElementById('real-file-input').click();
     }
 
+    // 파일 첨부 시 원본 파일 바이너리를 완전하게 무손실 영구 인코딩(Base64)하여 보관합니다.
     function handleFileSelected(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
         
-        selectedFile = {
-          name: file.name,
-          size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-          fileObject: file
+        // 데이터 누락을 완전 차단하기 위해 FileReader 활용 직렬화
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedFile = {
+            name: file.name,
+            size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+            base64Data: e.target.result // Base64 스트링 원본 데이터 포함
+          };
+          displaySelectedFile();
+          showToast("증빙 자산이 성공적으로 로드되었습니다.", "파일 첨부");
         };
-        showToast("파일이 임시 업로드 영역에 준비되었습니다.", "파일 첨부");
-        displaySelectedFile();
+        reader.readAsDataURL(file);
       }
     }
 
@@ -977,7 +967,7 @@
       selectedFile = null;
       document.getElementById('real-file-input').value = '';
       document.getElementById('file-display-container').classList.add('hidden');
-      showToast("첨부했던 증빙 파일이 취소되었습니다.", "파일 철회");
+      showToast("첨부된 파일이 해제되었습니다.", "파일 해제");
     }
 
     function formatAmountInput(input) {
@@ -991,7 +981,7 @@
 
     function submitBreakfastReceipt() {
       if (isSubmissionsClosed) {
-        showToast("정산이 마감되어 현재 제출할 수 없습니다.", "제출 불가");
+        showToast("정산 제출 기간이 조기 마감되었습니다.", "제출 차단");
         return;
       }
 
@@ -1000,17 +990,17 @@
       const amount = Number(rawAmount);
 
       if (!rawName) {
-        showToast("제출하시는 분의 이름을 정확히 입력하세요.", "입력 요망");
+        showToast("제출 사원명을 올바르게 적어주십시오.", "입력 요망");
         return;
       }
 
       if (!amount || amount <= 0) {
-        showToast("실제 정산받으실 금액을 입력하십시오.", "입력 오류");
+        showToast("조식 실제 정산 금액을 정확히 입력하십시오.", "금액 기입");
         return;
       }
 
       if (!selectedFile) {
-        showToast("증빙용 영수증 사진 혹은 PDF 파일을 반드시 첨부해야 합니다.", "첨부 누락");
+        showToast("제출에 필요한 영수증 또는 PDF 증빙 문서를 첨부하세요.", "증빙 누락");
         return;
       }
 
@@ -1021,7 +1011,7 @@
         name: rawName,
         amount: amount,
         file: selectedFile.name,
-        fileObject: selectedFile.fileObject, 
+        base64Data: selectedFile.base64Data, // 새로고침 후에도 영구 유지될 파일 Base64 스트림
         submitted: true,
         date: today,
         status: "대기 중"
@@ -1033,9 +1023,9 @@
         submissions.unshift(newSubmission);
       }
 
-      sortSubmissions(); // 새로운 제출 등록 시 실시간 가나다 정렬
+      sortSubmissions(); 
 
-      showToast(`${rawName} 님의 정산 청구서 수신이 완료되었습니다.`, "제출 성공");
+      showToast(`${rawName} 님의 조식비 청구 정산서가 정상 수합되었습니다.`, "제출 성공");
 
       document.getElementById('input-name').value = '';
       document.getElementById('input-amount').value = '';
@@ -1050,21 +1040,20 @@
       const activeSubmittedCount = submissions.filter(s => s.submitted).length;
       const totalCalculatedAmount = activeSubmittedCount * 50000;
 
+      document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
       document.getElementById('dash-submitted-count').innerText = `${activeSubmittedCount}명`;
       document.getElementById('dash-calculated-amount').innerText = `${totalCalculatedAmount.toLocaleString()} 원`;
 
-      document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
-      document.getElementById('deadline-display').innerText = deadlineText;
-
-      const totalSubmittedAll = submissions.filter(s => s.submitted).length;
-      const totalCountText = document.getElementById('list-total-count');
-      if (totalCountText) {
-        totalCountText.innerText = `총 ${totalSubmittedAll}명 제출 완료`;
+      const listCount = document.getElementById('list-total-count');
+      if (listCount) {
+        listCount.innerText = `총 ${activeSubmittedCount}명 제출 완료`;
       }
+
+      document.getElementById('deadline-display').innerText = deadlineText;
 
       const welcomeMsg = document.getElementById('welcome-message');
       if (welcomeMsg && currentUser) {
-        welcomeMsg.innerText = `안녕하세요, ${currentUser.name} 님!`;
+        welcomeMsg.innerText = `환영합니다, ${currentUser.name} 님!`;
       }
     }
 
@@ -1083,13 +1072,13 @@
           <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">제출 증빙</th>
           <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">정산 일자</th>
           <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">상태</th>
-          <th class="py-4 px-6 whitespace-nowrap text-right sticky top-0 bg-slate-50 z-10">제어</th>
+          <th class="py-4 px-6 text-right sticky top-0 bg-slate-50 z-10">제어</th>
         `;
       } else {
         headerRow.innerHTML = `
           <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">이름</th>
           <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">정산 제출 여부</th>
-          <th class="py-4 px-6 whitespace-nowrap text-right sticky top-0 bg-slate-50 z-10">처리 비고</th>
+          <th class="py-4 px-6 text-right sticky top-0 bg-slate-50 z-10">처리 비고</th>
         `;
       }
 
@@ -1101,7 +1090,7 @@
           const amountStr = item.submitted ? `${item.amount.toLocaleString()} 원` : '-';
           const statusBadge = getStatusBadgeClass(item.status);
           const fileLink = item.file ? `
-            <button onclick="simulateFileDownload('${item.file}')" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
+            <button onclick="simulateFileDownload('${item.name}', '${item.file}')" class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline">
               <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-500"></i> ${item.file}
             </button>
           ` : '<span class="text-slate-300">-</span>';
@@ -1111,7 +1100,7 @@
               <button onclick="updateSubmissionStatus(${index}, '승인 완료')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded text-[11px] transition">승인</button>
               <button onclick="openRejectModal(${index})" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded text-[11px] transition">반려</button>
             </div>
-          ` : `<span class="text-[10px] text-slate-400 font-medium">관리 완료</span>`;
+          ` : `<span class="text-[10px] text-slate-400 font-semibold">관리 완료</span>`;
 
           tr.innerHTML = `
             <td class="py-4 px-6 font-semibold text-slate-900 whitespace-nowrap">${item.name}</td>
@@ -1161,10 +1150,8 @@
         return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15">승인 완료</span>`;
       } else if (status === '반려됨') {
         return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-600/15">반려됨</span>`;
-      } else if (status === '대기 중') {
-        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-600/15">검토 대기</span>`;
       } else {
-        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400">대상 아님</span>`;
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 ring-1 ring-amber-600/15">검토 대기</span>`;
       }
     }
 
@@ -1180,15 +1167,13 @@
     function openRejectModal(idx) {
       pendingRejectIndex = idx;
       document.getElementById('reject-admin-pw').value = '';
-      const modal = document.getElementById('reject-modal');
-      modal.classList.remove('hidden');
+      document.getElementById('reject-modal').classList.remove('hidden');
     }
 
     function closeRejectModal() {
       pendingRejectIndex = null;
       document.getElementById('reject-admin-pw').value = '';
-      const modal = document.getElementById('reject-modal');
-      modal.classList.add('hidden');
+      document.getElementById('reject-modal').classList.add('hidden');
     }
 
     function confirmRejectSubmission() {
@@ -1239,7 +1224,6 @@
       const btnText = document.getElementById('btn-toggle-close-text');
       const btnIcon = document.getElementById('btn-toggle-close');
       const overlay = document.getElementById('form-locked-overlay');
-      const resetBtn = document.getElementById('btn-admin-reset');
 
       if (!btnText || !btnIcon || !overlay) return;
 
@@ -1248,13 +1232,11 @@
         btnText.innerText = "제출 접수 재개";
         btnIcon.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
         btnIcon.innerHTML = `<i data-lucide="unlock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 접수 재개</span>`;
-        if (resetBtn) resetBtn.classList.remove('hidden'); 
       } else {
         overlay.classList.add('hidden');
         btnText.innerText = "제출 마감하기";
         btnIcon.className = "px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
         btnIcon.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 마감하기</span>`;
-        if (resetBtn) resetBtn.classList.add('hidden'); 
       }
       lucide.createIcons();
     }
@@ -1276,7 +1258,7 @@
       const confirmPw = confirmPwInput.value.trim();
 
       if (confirmPw !== credentials.admin.pw) {
-        showToast("현재 관리자 비밀번호 검증에 실패했습니다. 올바른 비밀번호를 입력하세요.", "인증 오류");
+        showToast("현재 비밀번호 검증에 실패했습니다.", "인증 오류");
         return;
       }
 
@@ -1284,53 +1266,60 @@
       const newAdminPw = document.getElementById('admin-admin-pw').value.trim();
 
       if (!newAdminId || !newAdminPw) {
-        showToast("변경할 관리자 아이디 및 비밀번호 항목을 모두 입력해야 합니다.", "입력 요망");
+        showToast("새 계정 항목을 정확히 작성하세요.", "입력 오류");
         return;
       }
 
       credentials.admin.id = newAdminId;
       credentials.admin.pw = newAdminPw;
 
-      showToast("관리자 로그인 계정 정보가 성공적으로 변경되었습니다.", "설정 반영 성공");
+      showToast("관리자 로그인 계정이 변경되었습니다.", "변경 성공");
       confirmPwInput.value = ''; 
       saveState(); 
     }
 
-    function simulateFileDownload(fileName) {
-      showToast(`'${fileName}' 증빙 서류 가상 다운로드 및 보안 검수 완료`, "미리보기 완료");
+    // 업로드한 파일을 미리보기 다운로드 할 수 있는 무결성 다운로드 엔진 탑재
+    function simulateFileDownload(name, fileName) {
+      const item = submissions.find(s => s.name === name);
+      if (item && item.base64Data) {
+        const element = document.createElement("a");
+        element.href = item.base64Data;
+        element.download = fileName;
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        showToast(`'${fileName}' 다운로드 완료`, "파일 다운로드");
+      } else {
+        showToast("증빙 자산이 유실되었습니다.", "오류");
+      }
     }
 
+    // Base64를 완전 바이너리로 역디코딩 패키징하여 무조건 원본 포맷 형태 파일로 다운로드 처리합니다.
     function batchDownloadProofsZip() {
-      const submittedItems = submissions.filter(s => s.submitted && s.file);
+      const submittedItems = submissions.filter(s => s.submitted && s.file && s.base64Data);
 
       if (submittedItems.length === 0) {
-        showToast("현재 정산 제출 완료된 증빙 서류가 존재하지 않습니다.", "다운로드 실패");
+        showToast("제출 완료된 정상 영수증이 존재하지 않습니다.", "다운로드 실패");
         return;
       }
 
-      showToast("증빙 자산 일괄 압축 빌드를 시작합니다...", "ZIP 생성 시작");
+      showToast("증빙 파일 일괄 압축 처리를 조율 중입니다...", "ZIP 빌드");
 
       const zip = new JSZip();
       const currentMonth = new Date().getMonth() + 1; 
 
       submittedItems.forEach(item => {
-        let extension = item.file.substring(item.file.lastIndexOf('.'));
-        let fileData;
-
-        // 실제 파일 객체가 새로고침이나 브라우저 재진입으로 인해 유실된 가상 데이터 상태인 경우,
-        // 오포맷(PDF인 척 하나 내용은 텍스트)으로 압축이 구성되어 발생하는 깨짐 현상을 방지하고자 .txt 문서로 안전 가공함
-        if (item.fileObject) {
-          fileData = item.fileObject;
-        } else {
-          extension = '.txt'; // 안전한 백업 문서로 포맷 교체
-          fileData = `[정산 증빙 데이터 유실 복구]\n\n성명: ${item.name}\n실 청구 금액: ${item.amount.toLocaleString()} 원\n정산 일자: ${item.date}\n\n* 안내: 본 문서는 브라우저 새로고침(세션 초기화) 이후 수합되어 영수증 가상 정보 텍스트로 보존되었습니다.`;
-        }
-
+        const extension = item.file.substring(item.file.lastIndexOf('.'));
         const formattedFileName = `${currentMonth}월 조식_${item.name}${extension}`;
-        zip.file(formattedFileName, fileData);
+        
+        // Base64 데이터 스트림 추출 (헤더 부분과 순수 바디부 분리)
+        const parts = item.base64Data.split(',');
+        const base64Content = parts[1]; // 순수 Base64 스트링
+
+        // JSZip에 base64로 디코딩 기입을 완벽 선언하여 깨짐 없이 원본 확장자 그대로 조립
+        zip.file(formattedFileName, base64Content, { base64: true });
       });
 
-      // 표준 DEFLATE 압축 메커니즘을 적용하여 윈도우, 맥, 반디집 등 공용 환경 디코딩 해제 호환성 보장
       zip.generateAsync({ 
         type: "blob",
         compression: "DEFLATE",
@@ -1342,9 +1331,9 @@
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
-        showToast("모든 증빙 영수증이 일목요연하게 압축되어 다운로드되었습니다.", "일괄 다운로드 완료");
+        showToast("정산 영수증 모음이 깨짐 없이 압축 해제 규격으로 내려받아졌습니다.", "다운로드 성공");
       }).catch(err => {
-        showToast("압축 패키징 중 오류가 발생했습니다: " + err, "시스템 오류");
+        showToast("압축 도중 장애가 발생했습니다: " + err, "시스템 오류");
       });
     }
 
@@ -1388,7 +1377,6 @@
         "12-25": "성탄절"
       };
 
-      // 1) 이전 달 날짜 채우기
       for (let i = firstDayIndex; i > 0; i--) {
         const d = prevLastDate - i + 1;
         const cell = document.createElement('div');
@@ -1397,7 +1385,6 @@
         gridContainer.appendChild(cell);
       }
 
-      // 2) 현재 달 실제 날짜 채우기
       const today = new Date();
       for (let day = 1; day <= lastDate; day++) {
         const cellDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -1415,9 +1402,9 @@
 
         let dayColorClass = "text-slate-600";
         if (dayOfWeek === 0 || isHoliday) {
-          dayColorClass = "text-rose-500 font-semibold"; 
+          dayColorClass = "text-rose-500 font-bold"; 
         } else if (dayOfWeek === 6) {
-          dayColorClass = "text-indigo-500 font-semibold"; 
+          dayColorClass = "text-indigo-500 font-bold"; 
         }
 
         const todayBadge = isToday 
@@ -1460,7 +1447,6 @@
         gridContainer.appendChild(cell);
       }
 
-      // 3) 다음 달 날짜 채우기
       const totalCells = firstDayIndex + lastDate;
       const nextDaysNeeded = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
       for (let d = 1; d <= nextDaysNeeded; d++) {
@@ -1528,7 +1514,7 @@
         item.innerHTML = `
           <div class="flex items-center gap-2 min-w-0">
             <span class="w-2 h-2 rounded-full ${colorDot} shrink-0"></span>
-            <span class="text-xs text-slate-700 font-medium truncate">${evt.text}</span>
+            <span class="text-xs text-slate-700 font-semibold truncate">${evt.text}</span>
           </div>
           <button onclick="deleteCalendarEvent(${idx})" class="text-slate-400 hover:text-rose-500 p-1 rounded-md transition hover:bg-slate-50">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -1545,7 +1531,7 @@
       const text = textInput.value.trim();
 
       if (!text) {
-        showToast("일정 내용을 입력하세요.", "입력 누락");
+        showToast("일정 기록을 작성해 주십시오.", "입력 누락");
         return;
       }
 
@@ -1567,7 +1553,7 @@
         color: selectedColor
       });
 
-      showToast("새로운 일정을 캘린더에 기입 완료했습니다.", "일정 등록");
+      showToast("캘린더에 일정을 성공적으로 연동했습니다.", "일정 등록");
       textInput.value = '';
       
       saveState(); 
