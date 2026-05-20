@@ -1314,17 +1314,28 @@
       const currentMonth = new Date().getMonth() + 1; 
 
       submittedItems.forEach(item => {
-        const extension = item.file.substring(item.file.lastIndexOf('.'));
-        const formattedFileName = `${currentMonth}월 조식 ${item.name}${extension}`;
+        let extension = item.file.substring(item.file.lastIndexOf('.'));
+        let fileData;
 
+        // 실제 파일 객체가 새로고침이나 브라우저 재진입으로 인해 유실된 가상 데이터 상태인 경우,
+        // 오포맷(PDF인 척 하나 내용은 텍스트)으로 압축이 구성되어 발생하는 깨짐 현상을 방지하고자 .txt 문서로 안전 가공함
         if (item.fileObject) {
-          zip.file(formattedFileName, item.fileObject);
+          fileData = item.fileObject;
         } else {
-          zip.file(formattedFileName, `[정산 증빙] May Breakfast Receipt Data Mockup\nName: ${item.name}\nAmount: ${item.amount.toLocaleString()} KRW\nSubmitted Date: ${item.date}`);
+          extension = '.txt'; // 안전한 백업 문서로 포맷 교체
+          fileData = `[정산 증빙 데이터 유실 복구]\n\n성명: ${item.name}\n실 청구 금액: ${item.amount.toLocaleString()} 원\n정산 일자: ${item.date}\n\n* 안내: 본 문서는 브라우저 새로고침(세션 초기화) 이후 수합되어 영수증 가상 정보 텍스트로 보존되었습니다.`;
         }
+
+        const formattedFileName = `${currentMonth}월 조식_${item.name}${extension}`;
+        zip.file(formattedFileName, fileData);
       });
 
-      zip.generateAsync({ type: "blob" }).then(function(content) {
+      // 표준 DEFLATE 압축 메커니즘을 적용하여 윈도우, 맥, 반디집 등 공용 환경 디코딩 해제 호환성 보장
+      zip.generateAsync({ 
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      }).then(function(content) {
         const element = document.createElement("a");
         element.href = URL.createObjectURL(content);
         element.download = `${currentMonth}월_조식비_정산_증빙모음_울산사업팀.zip`;
