@@ -204,17 +204,23 @@
 
           <!-- Admin Config Panel (Only visible to admin) -->
           <div id="admin-config-panel" class="hidden bg-white rounded-xl border border-slate-200/80 shadow-sm p-6 space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
-              <i data-lucide="settings" class="text-rose-600 w-4 h-4"></i> 정산 기준 정보 설정 (관리자 전용)
-            </h3>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i data-lucide="settings" class="text-rose-600 w-4 h-4"></i> 정산 기준 정보 설정 (관리자 전용)
+              </h3>
+              <button onclick="saveAdminConfig()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                <span>기준 정보 저장</span>
+              </button>
+            </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1.5">총 인원 설정 (명)</label>
-                <input id="admin-input-headcount" type="number" oninput="updateAdminConfig()" value="12" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+                <input id="admin-input-headcount" type="number" placeholder="예: 12" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
               </div>
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1.5">청구 마감일 설정</label>
-                <input id="admin-input-deadline" type="text" oninput="updateAdminConfig()" value="5월 25일" placeholder="예: 5월 25일" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
+                <input id="admin-input-deadline" type="text" placeholder="예: 5월 25일" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition" />
               </div>
             </div>
           </div>
@@ -789,7 +795,11 @@
           adminCtrl.className = "flex items-center gap-2";
           adminCtrl.classList.remove('hidden');
         }
-        if (adminPanel) adminPanel.classList.remove('hidden');
+        if (adminPanel) {
+          adminPanel.classList.remove('hidden');
+          document.getElementById('admin-input-headcount').value = totalHeadcount;
+          document.getElementById('admin-input-deadline').value = deadlineText;
+        }
         if (adminAccountPanel) adminAccountPanel.classList.remove('hidden');
         if (adminDlBtn) adminDlBtn.classList.remove('hidden');
         if (navSchedule) navSchedule.classList.remove('hidden'); // 관리자일 때만 사이드바 메뉴 활성화
@@ -822,7 +832,7 @@
     }
 
     // 3-1. ADMIN CONFIG PANEL CONTROLLER
-    function updateAdminConfig() {
+    function saveAdminConfig() {
       const headcountInput = document.getElementById('admin-input-headcount');
       const deadlineInput = document.getElementById('admin-input-deadline');
 
@@ -835,7 +845,9 @@
 
       document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
       document.getElementById('deadline-display').innerText = deadlineText;
-      saveState(); // 바뀐 정산 일정 및 인원 정보 저장
+      
+      saveState(); // 바뀐 정산 일정 및 인원 정보 영구 저장
+      showToast("정산 기준 정보가 성공적으로 저장되었습니다.", "설정 저장");
     }
 
     // 4. TAB CONTROLLER
@@ -1023,6 +1035,9 @@
 
       document.getElementById('dash-submitted-count').innerText = `${activeSubmittedCount}명`;
       document.getElementById('dash-calculated-amount').innerText = `${totalCalculatedAmount.toLocaleString()} 원`;
+
+      document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
+      document.getElementById('deadline-display').innerText = deadlineText;
 
       const totalSubmittedAll = submissions.filter(s => s.submitted).length;
       const totalCountText = document.getElementById('list-total-count');
