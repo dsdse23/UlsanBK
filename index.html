@@ -413,10 +413,10 @@
                   </div>
                 </div>
                 
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto max-h-[420px] overflow-y-auto relative">
                   <table class="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr id="table-header-row" class="bg-slate-50 text-slate-400 uppercase tracking-wider border-b border-slate-100 font-semibold">
+                      <tr id="table-header-row" class="bg-slate-50 text-slate-400 uppercase tracking-wider border-b border-slate-100 font-semibold sticky top-0 z-10 shadow-xs">
                         <!-- Dynamic Header based on Role -->
                       </tr>
                     </thead>
@@ -653,9 +653,88 @@
     // 가상 일정(스케줄) 데이터 베이스 - 사용자의 요청에 따라 모든 예시 데이터 제거 후 완전 포맷팅
     let schedulesDb = {};
 
+    // 제출 명단을 가나다(ㄱㄴㄷ) 순으로 자동 정렬하는 함수
+    function sortSubmissions() {
+      submissions.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    }
+
     window.onload = function() {
+      loadState(); // 1. 브라우저 저장 상태 자동 복구
       lucide.createIcons();
+
+      // 2. 만약 자동 로그인 상태라면 대시보드 및 입력 필드 동기화
+      if (currentUser) {
+        enterApp();
+        const headcountInput = document.getElementById('admin-input-headcount');
+        const deadlineInput = document.getElementById('admin-input-deadline');
+        if (headcountInput) headcountInput.value = totalHeadcount;
+        if (deadlineInput) deadlineInput.value = deadlineText;
+        updateAdminConfig();
+        applySubmissionsClosedState();
+      }
     };
+
+    function saveState() {
+      try {
+        // fileObject(Blob 객체)는 JSON 직렬화가 불가하므로 메타데이터 이름만 남겨두고 저장
+        const submissionsToSave = submissions.map(s => {
+          const { fileObject, ...rest } = s;
+          return rest;
+        });
+
+        localStorage.setItem('ulsan_breakfast_submissions', JSON.stringify(submissionsToSave));
+        localStorage.setItem('ulsan_breakfast_schedules', JSON.stringify(schedulesDb));
+        localStorage.setItem('ulsan_breakfast_credentials', JSON.stringify(credentials));
+        localStorage.setItem('ulsan_breakfast_config', JSON.stringify({
+          totalHeadcount,
+          deadlineText,
+          isSubmissionsClosed
+        }));
+        
+        if (currentUser) {
+          localStorage.setItem('ulsan_breakfast_session', JSON.stringify(currentUser));
+        } else {
+          localStorage.removeItem('ulsan_breakfast_session');
+        }
+      } catch (e) {
+        console.error("데이터 저장 중 오류가 발생했습니다:", e);
+      }
+    }
+
+    function loadState() {
+      try {
+        const savedSubmissions = localStorage.getItem('ulsan_breakfast_submissions');
+        if (savedSubmissions) {
+          submissions = JSON.parse(savedSubmissions);
+          sortSubmissions(); // 로드 시 가나다 순 정렬 보장
+        }
+
+        const savedSchedules = localStorage.getItem('ulsan_breakfast_schedules');
+        if (savedSchedules) {
+          schedulesDb = JSON.parse(savedSchedules);
+        }
+
+        const savedCredentials = localStorage.getItem('ulsan_breakfast_credentials');
+        if (savedCredentials) {
+          credentials = JSON.parse(savedCredentials);
+        }
+
+        const savedConfig = localStorage.getItem('ulsan_breakfast_config');
+        if (savedConfig) {
+          const config = JSON.parse(savedConfig);
+          totalHeadcount = config.totalHeadcount ?? 12;
+          deadlineText = config.deadlineText ?? "5월 25일";
+          isSubmissionsClosed = config.isSubmissionsClosed ?? false;
+        }
+
+        const savedSession = localStorage.getItem('ulsan_breakfast_session');
+        if (savedSession) {
+          currentUser = JSON.parse(savedSession);
+        }
+      } catch (e) {
+        console.error("데이터 로드 중 오류가 발생했습니다:", e);
+      }
+    }
 
 
     // 2. LOGIN CONTROLLER
@@ -695,6 +774,7 @@
       document.getElementById('login-screen').classList.remove('hidden');
       document.getElementById('login-id').value = '';
       document.getElementById('login-pw').value = '';
+      saveState(); // 세션 파기 반영
       showToast("보안 세션이 파기되었습니다.", "로그아웃");
     }
 
@@ -750,6 +830,7 @@
       }
 
       document.getElementById('input-name').value = '';
+      saveState(); // 세션 지속성 반영
       switchTab('dashboard');
     }
 
@@ -767,6 +848,7 @@
 
       document.getElementById('stat-total-headcount').innerText = `${totalHeadcount}명`;
       document.getElementById('deadline-display').innerText = deadlineText;
+      saveState(); // 바뀐 정산 일정 및 인원 정보 저장
     }
 
     // 4. TAB CONTROLLER
@@ -934,12 +1016,15 @@
         submissions.unshift(newSubmission);
       }
 
+      sortSubmissions(); // 새로운 제출 등록 시 실시간 가나다 정렬 수행
+
       showToast(`${rawName} 님의 정산 청구서 수신이 완료되었습니다.`, "제출 성공");
 
       document.getElementById('input-name').value = '';
       document.getElementById('input-amount').value = '';
       removeSelectedFile();
 
+      saveState(); // 제출 완료 저장
       updateStatistics();
       renderSubmissionsList();
     }
@@ -976,18 +1061,18 @@
 
       if (currentUser.role === 'admin') {
         headerRow.innerHTML = `
-          <th class="py-4 px-6 whitespace-nowrap">이름</th>
-          <th class="py-4 px-6 whitespace-nowrap">실제 사용 금액</th>
-          <th class="py-4 px-6 whitespace-nowrap">제출 증빙</th>
-          <th class="py-4 px-6 whitespace-nowrap">정산 일자</th>
-          <th class="py-4 px-6 whitespace-nowrap">상태</th>
-          <th class="py-4 px-6 whitespace-nowrap text-right">제어</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">이름</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">실제 사용 금액</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">제출 증빙</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">정산 일자</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">상태</th>
+          <th class="py-4 px-6 whitespace-nowrap text-right sticky top-0 bg-slate-50 z-10">제어</th>
         `;
       } else {
         headerRow.innerHTML = `
-          <th class="py-4 px-6 whitespace-nowrap">이름</th>
-          <th class="py-4 px-6 whitespace-nowrap">정산 제출 여부</th>
-          <th class="py-4 px-6 whitespace-nowrap text-right">처리 비고</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">이름</th>
+          <th class="py-4 px-6 whitespace-nowrap sticky top-0 bg-slate-50 z-10">정산 제출 여부</th>
+          <th class="py-4 px-6 whitespace-nowrap text-right sticky top-0 bg-slate-50 z-10">처리 비고</th>
         `;
       }
 
@@ -1070,6 +1155,7 @@
       const item = submissions[idx];
       item.status = targetStatus;
       showToast(`${item.name} 님의 조식비가 '${targetStatus}' 처리되었습니다.`, "정산 관리");
+      saveState(); // 상태 변경 완료 후 저장
       updateStatistics();
       renderSubmissionsList();
     }
@@ -1101,6 +1187,7 @@
         
         showToast(`${targetItem.name} 사원의 정산 건이 반려되어 목록에서 완전히 삭제되었습니다.`, "반려 완료");
         
+        saveState(); // 반려 완료 후 가상DB 동기화 및 저장
         closeRejectModal();
         updateStatistics();
         renderSubmissionsList();
@@ -1125,6 +1212,7 @@
       if (inputPw === credentials.admin.pw) {
         submissions = []; 
         showToast("모든 정산 기록 및 제출 서류 파일이 성공적으로 초기화되었습니다.", "정산 리셋 완료");
+        saveState(); // 데이터 전체 밀어버린 후 저장
         closeResetModal();
         updateStatistics();
         renderSubmissionsList();
@@ -1134,30 +1222,40 @@
     }
 
     // 8-3. SUBMISSION DEADLINE CLOSE CONTROLLER
-    function toggleSubmissionsClosed() {
-      isSubmissionsClosed = !isSubmissionsClosed;
-      
+    function applySubmissionsClosedState() {
       const btnText = document.getElementById('btn-toggle-close-text');
       const btnIcon = document.getElementById('btn-toggle-close');
       const overlay = document.getElementById('form-locked-overlay');
       const resetBtn = document.getElementById('btn-admin-reset');
+
+      if (!btnText || !btnIcon || !overlay) return;
 
       if (isSubmissionsClosed) {
         overlay.classList.remove('hidden');
         btnText.innerText = "제출 접수 재개";
         btnIcon.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
         btnIcon.innerHTML = `<i data-lucide="unlock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 접수 재개</span>`;
-        showToast("이번 달 조식 청구 접수가 마감 처리되었습니다.", "접수 마감");
         if (resetBtn) resetBtn.classList.remove('hidden'); 
       } else {
         overlay.classList.add('hidden');
         btnText.innerText = "제출 마감하기";
         btnIcon.className = "px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition shadow-sm flex items-center gap-1.5";
         btnIcon.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i> <span id="btn-toggle-close-text">제출 마감하기</span>`;
-        showToast("조식비 청구 접수가 다시 정상 개방되었습니다.", "접수 재개");
         if (resetBtn) resetBtn.classList.add('hidden'); 
       }
       lucide.createIcons();
+    }
+
+    function toggleSubmissionsClosed() {
+      isSubmissionsClosed = !isSubmissionsClosed;
+      applySubmissionsClosedState();
+
+      if (isSubmissionsClosed) {
+        showToast("이번 달 조식 청구 접수가 마감 처리되었습니다.", "접수 마감");
+      } else {
+        showToast("조식비 청구 접수가 다시 정상 개방되었습니다.", "접수 재개");
+      }
+      saveState(); // 마감 토글값 브라우저 저장
     }
 
     // 8-4. SAVE NEW CREDENTIALS 
@@ -1183,6 +1281,7 @@
 
       showToast("관리자 로그인 계정 정보가 성공적으로 변경되었습니다.", "설정 반영 성공");
       confirmPwInput.value = ''; 
+      saveState(); // 변경된 계정 정보 동기화 및 로컬스토리지 보존
     }
 
     function simulateFileDownload(fileName) {
@@ -1468,6 +1567,7 @@
       showToast("새로운 일정을 캘린더에 기입 완료했습니다.", "일정 등록");
       textInput.value = '';
       
+      saveState(); // 스케줄 추가 사항 영구 저장
       renderModalEventList();
       renderCalendar(); // 백그라운드 달력 뷰 업데이트
     }
@@ -1484,6 +1584,7 @@
       }
 
       showToast(`'${deletedItemName}' 일정이 삭제되었습니다.`, "일정 삭제");
+      saveState(); // 스케줄 삭제 사항 반영 및 저장
       renderModalEventList();
       renderCalendar();
     }
