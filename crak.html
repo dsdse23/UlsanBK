@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시스템 점검 중 | 조식비 정산 시스템</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css" />
+
+  <style>
+    body { font-family: 'Pretendard', sans-serif; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+
+  <div class="max-w-md w-full text-center bg-white p-10 rounded-3xl border border-slate-100 shadow-xl space-y-6">
+    
+    <!-- Icon area -->
+    <div class="mx-auto w-20 h-20 bg-indigo-50 flex items-center justify-center rounded-3xl text-indigo-600 animate-pulse">
+      <i data-lucide="wrench" class="w-10 h-10"></i>
+    </div>
+
+    <!-- Text area -->
+    <div class="space-y-2">
+      <h1 class="text-2xl font-bold text-slate-900">시스템 점검 중</h1>
+      <p class="text-sm text-slate-500 leading-relaxed">
+        더 나은 서비스 제공을 위해 현재 시스템 점검을 진행하고 있습니다.<br>
+        잠시만 기다려 주시면 곧 정상화하도록 하겠습니다.
+      </p>
+    </div>
+
+    <!-- Footer info -->
+    <div class="pt-6 border-t border-slate-100">
+      <p class="text-[11px] text-slate-400">
+        울산사업팀 복리후생 정산 관리 시스템
+      </p>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
